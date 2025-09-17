@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<EventsRepository>();
+builder.Services.AddHttpClient<GoogleMapsService>();
 
 var app = builder.Build();
 
@@ -13,6 +14,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.MapGet("/maps", async (string address, GoogleMapsService mapsService) =>
+{
+    try 
+    {
+        var coords = await mapsService.GetCoordinatesAsync(address);
+        return Results.Ok(new { lat = coords.lat, lng = coords.lng });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest($"Error geocoding address: {ex.Message}");
+    }
+});
 
 app.MapGet("/", async () =>
 {
