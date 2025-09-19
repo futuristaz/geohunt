@@ -25,7 +25,7 @@ public class GoogleMapsService
 
         using var doc = JsonDocument.Parse(content);
         var root = doc.RootElement;
-        
+
         var location = root
             .GetProperty("results")[0]
             .GetProperty("geometry")

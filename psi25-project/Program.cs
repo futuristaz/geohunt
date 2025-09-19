@@ -15,6 +15,24 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.MapGet("/maps/distance", async (string address1, string address2, GoogleMapsService mapsService) =>
+{
+try
+{
+    var coords1 = await mapsService.GetCoordinatesAsync(address1);
+    var coords2 = await mapsService.GetCoordinatesAsync(address2);
+
+    var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, 2);
+
+    return Results.Ok(new {coords = new {first = new {lat = coords1.lat, lng = coords1.lng}, second = new {lat = coords2.lat, lng = coords2.lng}}, distance });
+
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest($"Error: {ex.Message}");
+    }
+});
+
 app.MapGet("/maps", async (string address, GoogleMapsService mapsService) =>
 {
     try 
