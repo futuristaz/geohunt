@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>psi25_project</RootNamespace>
+    <UserSecretsId>016f7823-fb58-4c4e-aad6-61eb40851a85</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

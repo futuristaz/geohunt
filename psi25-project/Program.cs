@@ -5,6 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<EventsRepository>();
+builder.Services.AddHttpClient<GoogleStreetViewService>();
+
 
 var app = builder.Build();
 
@@ -44,6 +46,22 @@ app.MapPost("/testingpost", (ComplexType complexType) =>
 });
 
 app.MapGet("/events", (EventsRepository repository) => repository.Get());
+
+// ----------------------------------------------------------------------------------------------------------------
+app.MapGet("/streetview", async (double lat, double lng, GoogleStreetViewService streetViewService) =>
+{
+    try
+    {
+        var imageBytes = await streetViewService.GetStreetViewAsync(lat, lng);
+        return Results.File(imageBytes, "image/jpeg");
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest($"Error retrieving street view: {ex.Message}");
+    }
+});
+// ----------------------------------------------------------------------------------------------------------------
+
 
 app.MapDelete("/", () => "This is a DELETE request!");
 app.MapPut("/", () => "This is a PUT request!");
