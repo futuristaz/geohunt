@@ -61,7 +61,8 @@ app.MapGet("/streetview", async (double lat, double lng, GoogleStreetViewService
     }
 });
 // ----------------------------------------------------------------------------------------------------------------
-
+app.UseStaticFiles();
+// ----------------------------------------------------------------------------------------------------------------
 
 app.MapDelete("/", () => "This is a DELETE request!");
 app.MapPut("/", () => "This is a PUT request!");
