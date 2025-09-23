@@ -45,6 +45,10 @@ app.MapPost("/testingpost", (ComplexType complexType) =>
 
 app.MapGet("/events", (EventsRepository repository) => repository.Get());
 
+// ----------------------------------------------------------------------------------------------------------------
+app.UseStaticFiles();
+// ----------------------------------------------------------------------------------------------------------------
+
 app.MapDelete("/", () => "This is a DELETE request!");
 app.MapPut("/", () => "This is a PUT request!");
 app.MapPatch("/", () => "This is a PATCH request!");
