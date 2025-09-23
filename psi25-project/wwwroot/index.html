@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <title>Street View Example</title>
     <style>
       #street-view {
@@ -8,31 +9,12 @@
         width: 100%;
       }
     </style>
-    <script async
-      src="https://maps.googleapis.com/maps/api/js?key=<API_KEY>&callback=initMap">
-    </script>
-    <script>
-      const LAT = 40.748817;   // Latitude
-      const LNG = -73.985428;  // Longitude
-      const HEADING = 165;    
-      const PITCH = 0;     
-      const ZOOM = 1;          
-
-      function initMap() {
-        const position = { lat: LAT, lng: LNG };
-
-        const panorama = new google.maps.StreetViewPanorama(
-          document.getElementById("street-view"),
-          {
-            position: position,
-            pov: { heading: HEADING, pitch: PITCH },
-            zoom: ZOOM,
-          }
-        );
-      }
-    </script>
   </head>
   <body>
     <div id="street-view"></div>
+    <script src="Scripts/streetView.js"></script>
+    <script async
+      src="https://maps.googleapis.com/maps/api/js?key=<API>&callback=initMap">
+    </script>
   </body>
 </html>
