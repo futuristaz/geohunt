@@ -3,12 +3,12 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
-public class GoogleMapsService
+public class GoogleMapsGateway
 {
     private readonly string _apiKey;
     private readonly HttpClient _httpClient;
 
-    public GoogleMapsService(HttpClient httpClient, IConfiguration configuration)
+    public GoogleMapsGateway(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _apiKey = configuration["GoogleMaps:ApiKey"]

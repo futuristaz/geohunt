@@ -4,7 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHttpClient<GoogleMapsService>();
+builder.Services.AddHttpClient<GoogleMapsGateway>();
 
 var app = builder.Build();
 
@@ -14,7 +14,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapGet("api/geocoding/distance", async (string address1, string address2, GoogleMapsService mapsService) =>
+app.MapGet("api/geocoding/distance", async (string address1, string address2, GoogleMapsGateway mapsService) =>
 {
 try
 {
@@ -32,7 +32,7 @@ try
     }
 });
 
-app.MapGet("api/geocoding/address", async (string address, GoogleMapsService mapsService) =>
+app.MapGet("api/geocoding/address", async (string address, GoogleMapsGateway mapsService) =>
 {
     try 
     {
