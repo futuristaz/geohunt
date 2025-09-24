@@ -14,6 +14,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
+
 app.MapGet("api/geocoding/distance", async (string address1, string address2, GoogleMapsGateway mapsService) =>
 {
 try

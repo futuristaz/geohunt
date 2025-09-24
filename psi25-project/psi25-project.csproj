@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>psi25_project</RootNamespace>
-    <UserSecretsId>9b8c43e8-7a22-4d79-998b-a5e42a29253d</UserSecretsId>
+    <UserSecretsId>016f7823-fb58-4c4e-aad6-61eb40851a85</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
