@@ -1,19 +1,17 @@
-// Scripts/streetView.js
-const LAT = 40.748817;   // Latitude
-const LNG = -73.985428;  // Longitude
-const HEADING = 165;    
-const PITCH = 0;     
-const ZOOM = 1;          
+async function initMap() {
+  
+  const response = await fetch('/api/geocoding/default-streetview');
 
-function initMap() {
-  const position = { lat: LAT, lng: LNG };
+  const data = await response.json();
 
-  const panorama = new google.maps.StreetViewPanorama(
+  new google.maps.StreetViewPanorama(
     document.getElementById("street-view"),
-    {
-      position: position,
-      pov: { heading: HEADING, pitch: PITCH },
-      zoom: ZOOM,
-    }
+        {
+          position: { lat: data.lat, lng: data.lng },
+          pov: { heading: 0, pitch: 0 },
+          zoom: 1
+        }
   );
 }
+
+window.onload = initMap;

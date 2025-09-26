@@ -42,4 +42,21 @@ public class GeocodingController : ControllerBase
             return BadRequest($"Error geocoding address: {ex.Message}");
         }
     }
+// --------------------------------------------------------------------------------------
+    [HttpGet("default-streetview")]
+    public async Task<IActionResult> GetDefaultStreetView()
+    {
+        String address = "Šeškinė";
+
+        try
+        {
+            var coords = await _mapsService.GetCoordinatesAsync(address);
+            return Ok(new { lat = coords.lat, lng = coords.lng });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"Error geocoding address: {ex.Message}");
+        }
+    }
+// --------------------------------------------------------------------------------------
 }
