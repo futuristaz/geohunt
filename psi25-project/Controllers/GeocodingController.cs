@@ -59,4 +59,15 @@ public class GeocodingController : ControllerBase
         }
     }
 // --------------------------------------------------------------------------------------
+    [HttpGet("closest")]
+    public async Task<IActionResult> GetClosestStreetView(double lat, double lng)
+    {
+        var result = await _mapsService.GetStreetViewMetadataAsync(lat, lng);
+
+        if (result == null)
+            return NotFound(new { message = "No Street View found nearby" });
+
+        return Ok(result);
+    }
+// --------------------------------------------------------------------------------------
 }
