@@ -49,7 +49,7 @@ public class UserController : ControllerBase
         // Initialize collections and set timestamps
         user.Games = new List<psi25_project.Models.Game>();
         user.CreatedAt = DateTime.UtcNow;
-        
+
         try
         {
             _context.Users.Add(user);
@@ -63,5 +63,20 @@ public class UserController : ControllerBase
             // Handle database errors (e.g., duplicate email, constraint violations)
             return BadRequest("Unable to create user. Please check your input. Error: " + ex.Message);
         }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
+
+        return Ok($"User {user.Id} deleted successfully.");
     }
 }
