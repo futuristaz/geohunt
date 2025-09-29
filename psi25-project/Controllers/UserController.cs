@@ -1,5 +1,8 @@
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -31,36 +34,42 @@ public class UserController : ControllerBase
         return user;
     }
 
-    [HttpPost]
-    public async Task<ActionResult<psi25_project.Models.User>> CreateUser(psi25_project.Models.User user)
+
+    public class RegisterUserDto
     {
-        // Input validation
+        [Required]
+        public string Username { get; set; } = string.Empty;
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<psi25_project.Models.User>> CreateUser([FromBody] RegisterUserDto dto)
+    {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        // Set ID if not already set (depends on your model configuration)
-        if (user.Id == Guid.Empty)
+        var user = new psi25_project.Models.User
         {
-            user.Id = Guid.NewGuid();
-        }
+            Id = Guid.NewGuid(),
+            Username = dto.Username,
+            Games = new List<psi25_project.Models.Game>(),
+            CreatedAt = DateTime.UtcNow
+        };
 
-        // Initialize collections and set timestamps
-        user.Games = new List<psi25_project.Models.Game>();
-        user.CreatedAt = DateTime.UtcNow;
+        var passwordHasher = new PasswordHasher<psi25_project.Models.User>();
+        user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
 
         try
         {
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-
-            // Return 201 Created with location header pointing to the new user
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
         }
         catch (DbUpdateException ex)
         {
-            // Handle database errors (e.g., duplicate email, constraint violations)
             return BadRequest("Unable to create user. Please check your input. Error: " + ex.Message);
         }
     }

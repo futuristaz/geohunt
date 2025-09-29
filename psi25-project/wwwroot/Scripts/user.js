@@ -10,7 +10,7 @@ document.getElementById('createUserForm').addEventListener('submit', async funct
     e.preventDefault();
     
     const username = document.getElementById('username').value;
-    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
     
     try {
         const response = await fetch(API_BASE, {
@@ -20,7 +20,7 @@ document.getElementById('createUserForm').addEventListener('submit', async funct
             },
             body: JSON.stringify({
                 username: username,
-                email: email
+                password: password
             })
         });
 
@@ -68,7 +68,6 @@ function displayUsers(users) {
         html += `
             <div class="user-item">
                 <strong>Username:</strong> ${user.username || 'N/A'}<br>
-                <strong>Email:</strong> ${user.email || 'N/A'}<br>
                 <strong>ID:</strong> ${user.id}<br>
                 <strong>Created:</strong> ${new Date(user.createdAt).toLocaleString()}<br>
                 <button onclick="deleteUser('${user.id}')" style="background-color: #dc3545;">Delete</button>
