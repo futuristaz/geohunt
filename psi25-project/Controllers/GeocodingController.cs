@@ -1,4 +1,6 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Mvc;
+using psi25_project;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -11,55 +13,39 @@ public class GeocodingController : ControllerBase
         _mapsService = mapsService;
     }
 
-    [HttpGet("distance")]
-    public async Task<IActionResult> GetDistance(string address1, string address2)
-    {
-        try
-        {
-            var coords1 = await _mapsService.GetCoordinatesAsync(address1);
-            var coords2 = await _mapsService.GetCoordinatesAsync(address2);
-
-            var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, 2);
-
-            return Ok(new { coords = new { first = new { lat = coords1.lat, lng = coords1.lng }, second = new { lat = coords2.lat, lng = coords2.lng } }, distance });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest($"Error: {ex.Message}");
-        }
-    }
-
+    // --------------------------------------------------------------------------------------
+    //Method to get coordinates(double; double) from address from <PickAddress.cs>
+    //And modify them using <ModifyCoordinates.cs>
+    // --------------------------------------------------------------------------------------
     [HttpGet("address")]
-    public async Task<IActionResult> GetCoordinates(string address)
+    public async Task<IActionResult> GetCoordinates()
     {
         try
         {
-            var coords = await _mapsService.GetCoordinatesAsync(address);
-            return Ok(new { lat = coords.lat, lng = coords.lng });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest($"Error geocoding address: {ex.Message}");
-        }
-    }
-// --------------------------------------------------------------------------------------
-    [HttpGet("default-streetview")]
-    public async Task<IActionResult> GetDefaultStreetView()
-    {
-        String address = "Šeškinė";
+            string address = AddressProvider.GetRandomAddress();
 
-        try
-        {
             var coords = await _mapsService.GetCoordinatesAsync(address);
-            return Ok(new { lat = coords.lat, lng = coords.lng });
+            var modified = CoordinateModifier.ModifyCoordinates(coords.lat, coords.lng);
+
+            return Ok(new
+            {
+                address,
+                original = new { lat = coords.lat, lng = coords.lng },
+                modified = new { lat = modified.newLat, lng = modified.newLng }
+            });
         }
         catch (Exception ex)
         {
             return BadRequest($"Error geocoding address: {ex.Message}");
         }
     }
-// --------------------------------------------------------------------------------------
-    [HttpGet("closest")]
+    // --------------------------------------------------------------------------------------
+
+
+    // --------------------------------------------------------------------------------------
+    //Method to verify if given coordinates(doulbe, double) has a streetview
+    // --------------------------------------------------------------------------------------
+    [HttpGet("validate")]
     public async Task<IActionResult> GetClosestStreetView(double lat, double lng)
     {
         var result = await _mapsService.GetStreetViewMetadataAsync(lat, lng);
@@ -69,5 +55,6 @@ public class GeocodingController : ControllerBase
 
         return Ok(result);
     }
-// --------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------
+
 }
