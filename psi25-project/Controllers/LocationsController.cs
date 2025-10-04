@@ -33,6 +33,7 @@ public class LocationsController : ControllerBase
         {
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
+            panoId = dto.panoId,
             CreatedAt = DateTime.UtcNow,
             LastPlayedAt = DateTime.UtcNow,
             Guesses = new List<Guess>()
