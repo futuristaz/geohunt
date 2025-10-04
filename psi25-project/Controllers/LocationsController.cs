@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using psi25_project.Models;
+using psi25_project.Models.Dtos;
+using Location = psi25_project.Models.Location;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -13,19 +16,52 @@ public class LocationsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<psi25_project.Models.Location>>> GetLocations()
+    public async Task<ActionResult<IEnumerable<Location>>> GetLocations()
     {
         return await _context.Locations.ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<psi25_project.Models.Location>> CreateLocation(psi25_project.Models.Location location)
+    public async Task<ActionResult<Location>> CreateLocation([FromBody] LocationDto dto)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var location = new Location
+        {
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            CreatedAt = DateTime.UtcNow,
+            LastPlayedAt = DateTime.UtcNow,
+            Guesses = new List<Guess>()
+        };
+
         _context.Locations.Add(location);
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetLocations), new { id = location.Id }, location);
     }
-    
+
+    [HttpPatch("{id}/last-played")]
+    public async Task<IActionResult> UpdateLastPlayed(int id)
+    {
+        var location = await _context.Locations.FindAsync(id);
+        if (location == null)
+        {
+            return NotFound("Location not found");
+        }
+
+        location.LastPlayedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "LastPlayedAt updated successfully",
+            location.Id,
+            location.LastPlayedAt
+        });
+    }
 
 }

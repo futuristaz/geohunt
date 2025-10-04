@@ -45,7 +45,7 @@ namespace psi25_project.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Games");
+                    b.ToTable("Games", (string)null);
                 });
 
             modelBuilder.Entity("psi25_project.Models.Guess", b =>
@@ -88,7 +88,7 @@ namespace psi25_project.Migrations
 
                     b.HasIndex("LocationId");
 
-                    b.ToTable("Guesses");
+                    b.ToTable("Guesses", (string)null);
                 });
 
             modelBuilder.Entity("psi25_project.Models.Location", b =>
@@ -118,7 +118,7 @@ namespace psi25_project.Migrations
                     b.HasIndex("Latitude", "Longitude")
                         .IsUnique();
 
-                    b.ToTable("Locations");
+                    b.ToTable("Locations", (string)null);
                 });
 
             modelBuilder.Entity("psi25_project.Models.User", b =>
@@ -142,7 +142,7 @@ namespace psi25_project.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("psi25_project.Models.Game", b =>

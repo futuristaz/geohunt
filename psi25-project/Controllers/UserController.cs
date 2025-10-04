@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using System.ComponentModel.DataAnnotations;
+using User = psi25_project.Models.User;
+using Game = psi25_project.Models.Game;
+using psi25_project.Models.Dtos;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -16,13 +18,13 @@ public class UserController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<psi25_project.Models.User>>> GetUsers()
+    public async Task<ActionResult<IEnumerable<User>>> GetUsers()
     {
         return await _context.Users.ToListAsync();
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<psi25_project.Models.User>> GetUser(Guid id)
+    public async Task<ActionResult<User>> GetUser(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
 
@@ -34,32 +36,23 @@ public class UserController : ControllerBase
         return user;
     }
 
-
-    public class RegisterUserDto
-    {
-        [Required]
-        public string Username { get; set; } = string.Empty;
-        [Required]
-        public string Password { get; set; } = string.Empty;
-    }
-
     [HttpPost]
-    public async Task<ActionResult<psi25_project.Models.User>> CreateUser([FromBody] RegisterUserDto dto)
+    public async Task<ActionResult<User>> CreateUser([FromBody] RegisterUserDto dto)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        var user = new psi25_project.Models.User
+        var user = new User
         {
             Id = Guid.NewGuid(),
             Username = dto.Username,
-            Games = new List<psi25_project.Models.Game>(),
+            Games = new List<Game>(),
             CreatedAt = DateTime.UtcNow
         };
 
-        var passwordHasher = new PasswordHasher<psi25_project.Models.User>();
+        var passwordHasher = new PasswordHasher<User>();
         user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
 
         try
