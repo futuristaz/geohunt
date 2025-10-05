@@ -57,4 +57,55 @@ public class GeocodingController : ControllerBase
     }
     // --------------------------------------------------------------------------------------
 
+
+    //--------------------------------------------------------------------------------------
+    //FINAL
+    //--------------------------------------------------------------------------------------
+    [HttpGet("valid_coords")]
+    public async Task<IActionResult> GetValidCoordinates(int maxTries = 1000)
+    {
+        try
+        {
+            string address = AddressProvider.GetRandomAddress();
+            var coords = await _mapsService.GetCoordinatesAsync(address);
+
+            double lat = coords.lat;
+            double lng = coords.lng;
+
+            int attempts = 0;
+
+            StreetViewLocation? streetView = null;
+
+            while (attempts < maxTries)
+            {
+                attempts++;
+
+                (lat, lng) = CoordinateModifier.ModifyCoordinates(lat, lng);
+                streetView = await _mapsService.GetStreetViewMetadataAsync(lat, lng);
+
+                if (streetView != null)
+                {
+                    return Ok(new
+                    {
+                        address,
+                        modifiedCoordinates = new { lat, lng },
+                        panoID = streetView.PanoId,
+                        attempts
+                    });
+                }
+            }
+            return NotFound(new
+            {
+                address,
+                attempts,
+                message = "No valid Street View found after retries"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"Error processing request: {ex.Message}");
+        }
+    } 
+    //--------------------------------------------------------------------------------------
+
 }

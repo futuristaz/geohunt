@@ -44,7 +44,7 @@ namespace psi25_project
         //------------------------------------------------------------------------------
         private static (double, double) ApplyShift(double lat, double lng, Direction dir)
         {
-            double meters = random.NextDouble() * 4000;
+            double meters = random.NextDouble() * 20000;
 
             double metersPerDegreeLat = 111320.0;
             double metersPerDegreeLng = 111320.0 * Math.Cos(lat * Math.PI / 180.0);
