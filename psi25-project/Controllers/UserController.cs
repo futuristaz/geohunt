@@ -59,7 +59,10 @@ public class UserController : ControllerBase
         {
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+            return Ok(new UserResponseDto {
+                Username = user.Username,
+                CreatedAt = user.CreatedAt
+            });
         }
         catch (DbUpdateException ex)
         {
@@ -80,5 +83,30 @@ public class UserController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok($"User {user.Id} deleted successfully.");
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginUserDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == dto.Username);
+        if (user == null)
+        {
+            return Unauthorized("Invalid username or password.");
+        }
+
+        var passwordHasher = new PasswordHasher<User>();
+        var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
+
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            return Unauthorized("Invalid username or password.");
+        }
+
+        return Ok("Login successful.");
     }
 }
