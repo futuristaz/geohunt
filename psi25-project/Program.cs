@@ -9,6 +9,8 @@ builder.Services.AddHttpClient<GoogleMapsGateway>();
 builder.Services.AddControllers();
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<GeocodingService>();
+
 
 var app = builder.Build();
 
