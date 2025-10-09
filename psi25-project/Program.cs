@@ -1,5 +1,8 @@
 using System.Diagnostics.Eventing.Reader;
 using Microsoft.EntityFrameworkCore;
+using psi25_project;
+using psi25_project.Gateways;
+using psi25_project.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
