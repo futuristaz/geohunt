@@ -1,15 +1,15 @@
-namespace psi25_project.Utils;
+using psi25_project.Models.Dtos;
 
 public static class DistanceCalculator
 {
-    public static double CalculateHaversineDistance((double lat, double lng) coords1, (double lat, double lng) coords2, int precision)
+    public static double CalculateHaversineDistance(GeocodeResultDto coords1, GeocodeResultDto coords2, int precision=2)
     {
         const int R = 6371000; // Earth's radius in meters
 
-        double phi1 = coords1.lat * Math.PI / 180;
-        double phi2 = coords2.lat * Math.PI / 180;
-        double dphi = (coords2.lat - coords1.lat) * Math.PI / 180;
-        double dlambda = (coords2.lng - coords1.lng) * Math.PI / 180;
+        double phi1 = coords1.Lat * Math.PI / 180;
+        double phi2 = coords2.Lat * Math.PI / 180;
+        double dphi = (coords2.Lat - coords1.Lat) * Math.PI / 180;
+        double dlambda = (coords2.Lng - coords1.Lng) * Math.PI / 180;
 
         double a = Math.Sin(dphi / 2) * Math.Sin(dphi / 2) +
                    Math.Cos(phi1) * Math.Cos(phi2) *

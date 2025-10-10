@@ -12,7 +12,6 @@ public class GeocodingController : ControllerBase
         _geocodingService = geocodingService;
     }
 
-    //-----------------------------------------------------------------------------------------
     [HttpGet("valid_coords")]
     public async Task<IActionResult> GetValidCoordinates()
     {
@@ -30,5 +29,4 @@ public class GeocodingController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
-//-----------------------------------------------------------------------------------------
 }

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using psi25_project.Services;
+using psi25_project.Models.Dtos;
 
 namespace psi25_project.Controllers
 {
@@ -7,20 +7,17 @@ namespace psi25_project.Controllers
     [Route("api/[controller]")]
     public class DistanceController : ControllerBase
     {
-        private readonly DistanceService _distanceService;
 
-        public DistanceController(DistanceService distanceService)
+        [HttpPost]
+        public IActionResult GetDistance([FromBody] DistanceDto dto)
         {
-            _distanceService = distanceService;
-        }
+            var coords1 = dto.initialCoords;
+            var coords2 = dto.guessedCoords;
 
-        [HttpGet("distance")]
-        public async Task<IActionResult> GetDistance([FromQuery] string address1, [FromQuery] string address2)
-        {
             try
             {
-                var result = await _distanceService.CalculateDistanceAsync(address1, address2);
-                return Ok(result);
+                var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, 2);
+                return Ok(distance);
             }
             catch (Exception ex)
             {
