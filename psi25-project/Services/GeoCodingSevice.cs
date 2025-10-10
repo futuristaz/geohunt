@@ -7,9 +7,7 @@ namespace psi25_project.Services
     public class GeocodingService
     {
         private readonly GoogleMapsGateway _mapsGateway;
-
-        private const int MaxTriesPerCity = 50;     // Hardcoded per address
-        private const int MaxTotalAttempts = 500;   // Safety limit to prevent infinite loop
+        private const int MaxTriesPerCity = 1000; // Hard limit for coordinate modification per city
 
         public GeocodingService(GoogleMapsGateway mapsGateway)
         {
@@ -18,27 +16,20 @@ namespace psi25_project.Services
 
         public async Task<(bool success, object result)> GetValidCoordinatesAsync()
         {
-            int totalAttempts = 0;
-
-            while (totalAttempts < MaxTotalAttempts)
+            while (true)
             {
                 string address = AddressProvider.GetRandomAddress();
+
                 GeocodeResultDto coords = await _mapsGateway.GetCoordinatesAsync(address);
 
                 double lat = coords.Lat;
                 double lng = coords.Lng;
 
-                int localAttempts = 0;
-                StreetViewLocationDto? streetView = null;
-
-                // Try multiple times for this address
-                while (localAttempts < MaxTriesPerCity && totalAttempts < MaxTotalAttempts)
+                for (int attempt = 1; attempt <= MaxTriesPerCity; attempt++)
                 {
-                    totalAttempts++;
-                    localAttempts++;
-
                     (lat, lng) = CoordinateModifier.ModifyCoordinates(lat, lng);
-                    streetView = await _mapsGateway.GetStreetViewMetadataAsync(lat, lng);
+
+                    StreetViewLocationDto? streetView = await _mapsGateway.GetStreetViewMetadataAsync(lat, lng);
 
                     if (streetView != null)
                     {
@@ -47,18 +38,11 @@ namespace psi25_project.Services
                             address,
                             modifiedCoordinates = new { lat, lng },
                             panoID = streetView.PanoId,
-                            localAttempts,
-                            totalAttempts
+                            attempts = attempt
                         });
                     }
                 }
             }
-
-            return (false, new
-            {
-                totalAttempts,
-                message = "No valid Street View found after multiple addresses and retries."
-            });
         }
     }
 }
