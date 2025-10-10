@@ -1,5 +1,8 @@
 using System.Diagnostics.Eventing.Reader;
 using Microsoft.EntityFrameworkCore;
+using psi25_project;
+using psi25_project.Gateways;
+using psi25_project.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +12,9 @@ builder.Services.AddHttpClient<GoogleMapsGateway>();
 builder.Services.AddControllers();
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<GeocodingService>();
+builder.Services.AddScoped<DistanceService>();
+
 
 var app = builder.Build();
 
