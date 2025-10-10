@@ -13,6 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<GeocodingService>();
+builder.Services.AddScoped<DistanceService>();
 
 
 var app = builder.Build();
