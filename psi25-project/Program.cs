@@ -15,5 +15,6 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/timer/start", (TimerService timer) => timer.Start());
 app.MapGet("/timer/status", (TimerService timer) => timer.Status());
 app.MapGet("/timer/reset", (TimerService timer) => timer.Reset());
+app.UseStaticFiles();
 
 app.Run();

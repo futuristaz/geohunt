@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Timer</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: black;
+      color: lime;
+      font-family: "Courier New", monospace;
+    }
+    #clock {
+      font-size: 1em;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+  <div id="clock">00:00</div>
+
+  <script>
+    let remainingSeconds = 120; 
+
+    function updateClock() {
+      let minutes = Math.floor(remainingSeconds / 60);
+      let seconds = remainingSeconds % 60;
+      document.getElementById("clock").textContent =
+        String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+
+      if (remainingSeconds > 0) {
+        remainingSeconds--;
+      }
+    }
+    updateClock();
+    // atnaujinam kas sekundę
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
