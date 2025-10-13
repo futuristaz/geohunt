@@ -20,14 +20,12 @@ namespace psi25_project.Controllers
             {
                 var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, 2);
                 var score = ScoreCalculator.CalculateGeoScore(distance);
-                var timeOfGuess = DateTime.Now.ToString("HH:mm:ss");
                 return Ok(new
                 {
                     dto.initialCoords,
                     dto.guessedCoords,
                     distance,
                     score,
-                    timeOfGuess
                 });
             }
             catch (Exception ex)
