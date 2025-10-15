@@ -16,7 +16,7 @@ namespace psi25_project.Controllers
 
             try
             {
-                var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, 2);
+                var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2);
                 return Ok(distance);
             }
             catch (Exception ex)
