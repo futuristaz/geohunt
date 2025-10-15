@@ -73,9 +73,9 @@ async function initMap() {
     };
 
     sessionStorage.setItem('guessData', JSON.stringify(guessData));
-    const distance = await fetchDistance(guessData);
-    sessionStorage.setItem('distance', distance);
-    const updatedGame = await updateScore(responseGame.id, Math.round(Number(distance))); // TODO: replace with actual score
+    const result = await getResult(guessData);
+    sessionStorage.setItem('result', JSON.stringify(result));
+    const updatedGame = await updateScore(responseGame.id, result.score);
 
     window.location.href = '/result.html';
   })
@@ -93,19 +93,19 @@ function showMessage(text, type) {
     }, 5000);
 }
 
-async function fetchDistance(data) {
+async function getResult(data) {
   try {
-    const response = await fetch('/api/distance', {
+    const response = await fetch('/api/result', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
     });
-    const distance = await response.text(); // API returns a plain double
-    return distance;
+    const result = await response.json();
+    return result;
   } catch (error) {
-    console.error('Error fetching distance:', error);
+    console.error('Error fetching result:', error);
     return null;
   }
 }

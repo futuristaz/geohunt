@@ -1,8 +1,3 @@
-using System;
-using System.Data;
-using System.IO;
-using System.Linq;
-
 namespace psi25_project
 {
     public static class AddressProvider
@@ -14,12 +9,12 @@ namespace psi25_project
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"Address file not found: {filePath}");
 
-            string selectedAddress = null; 
+            string? selectedAddress = null; 
             int count = 0;
 
             using (var reader = new StreamReader(filePath))
             {
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     if (string.IsNullOrWhiteSpace(line))
@@ -32,7 +27,7 @@ namespace psi25_project
             }
             if (selectedAddress == null)
                 throw new Exception("No valid address found.");
-            return selectedAddress;
+            return selectedAddress!;
         }
     }
 }

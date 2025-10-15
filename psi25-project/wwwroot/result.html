@@ -1,11 +1,43 @@
 <!DOCTYPE html>
 <html>
-    <body>
-        <div id="init-lat"></div>
-        <div id="init-lng"></div>
-        <div id="guessed-lat"></div>
-        <div id="guessed-lng"></div>
-        <div id="distance"></div>
-        <script src="Scripts/result.js"></script>
-    </body>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px;
+            height: 100vh;
+            margin: 0;
+        }
+
+        div {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px 20px;
+            margin: 6px 0;
+            width: 250px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        #score {
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div id="init-lat"></div>
+    <div id="init-lng"></div>
+    <div id="guessed-lat"></div>
+    <div id="guessed-lng"></div>
+    <div id="distance"></div>
+    <div id="score"></div>
+    <script src="Scripts/result.js"></script>
+</body>
 </html>
