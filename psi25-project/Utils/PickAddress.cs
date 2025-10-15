@@ -14,14 +14,25 @@ namespace psi25_project
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"Address file not found: {filePath}");
 
-            var addresses = File.ReadAllLines(filePath)
-                                .Where(line => !string.IsNullOrWhiteSpace(line))
-                                .ToList();
+            string selectedAddress = null; 
+            int count = 0;
 
-            if (addresses.Count == 0)
-                throw new Exception("No addresses found in file.");
+            using (var reader = new StreamReader(filePath))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
 
-            return addresses[random.Next(addresses.Count)];
+                    count++;
+                    if (random.Next(count) == 0) //reservoir sampling
+                        selectedAddress = line;
+                }
+            }
+            if (selectedAddress == null)
+                throw new Exception("No valid address found.");
+            return selectedAddress;
         }
     }
 }
