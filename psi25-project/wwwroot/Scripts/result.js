@@ -1,11 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const gameData = JSON.parse(sessionStorage.getItem('guessData'));
-    const result = JSON.parse(sessionStorage.getItem('result'));
+    const allResults = JSON.parse(sessionStorage.getItem('allResults')) || [];
 
-    document.getElementById('init-lat').textContent = `Initial latitude: ${gameData.initialCoords.lat.toFixed(5)}`;
-    document.getElementById('init-lng').textContent = `Initial longitude: ${gameData.initialCoords.lng.toFixed(5)}`;
-    document.getElementById('guessed-lat').textContent = `Guessed latitude: ${gameData.guessedCoords.lat.toFixed(5)}`;
-    document.getElementById('guessed-lng').textContent = `Guessed longitude: ${gameData.guessedCoords.lng.toFixed(5)}`;
-    document.getElementById('distance').textContent = `Distance: ${result.distance} kilometers`;
-    document.getElementById('score').textContent = `Score: ${result.score} points`;
+    allResults.forEach((result, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+            <h3>Round ${i + 1}</h3>
+            <p>Initial coordinates: (${result.initialCoords.lat.toFixed(5)}, ${result.initialCoords.lng.toFixed(5)})</p>
+            <p>Guessed coordinates: (${result.guessedCoords.lat.toFixed(5)}, ${result.guessedCoords.lng.toFixed(5)})</p>
+            <p>Distance: ${result.distance} kilometers</p>
+            <p>Score: ${result.score} points</p>
+            <hr/>
+        `;
+        document.getElementById('round-result').appendChild(div);
+    });
+
+    const totalScore = allResults.reduce((sum, r) => sum + r.score, 0);
+    const overallDiv = document.createElement('div');
+    overallDiv.innerHTML = `<h2>Total Score: ${totalScore} points</h2>`;
+    document.getElementById('overall-result').appendChild(overallDiv);
+
+    sessionStorage.removeItem('allResults');
 });

@@ -1,4 +1,16 @@
+const urlParams = new URLSearchParams(window.location.search);
+const totalRounds = parseInt(urlParams.get('rounds')) || 1;
+
 async function initMap() {
+  let currentRound = parseInt(sessionStorage.getItem('currentRound')) || 1;
+  let allResults = JSON.parse(sessionStorage.getItem('allResults')) || [];
+  let gameId = sessionStorage.getItem('gameId');
+  if (!gameId) {
+    const responseGame = await postGame({ UserId: "f5f925f5-4345-474e-a068-5169ab8bcb15" }); // TODO get actual user id
+    gameId = responseGame.id;
+    sessionStorage.setItem('gameId', gameId);
+  }
+
   const response = await fetch('/api/geocoding/valid_coords');
   const data = await response.json();
 
@@ -18,9 +30,8 @@ async function initMap() {
   );
 
   const responseLocation = await postLocation({ latitude: lat, longitude: lng, panoId: data.panoID });
-  const responseGame = await postGame({UserId: "f5f925f5-4345-474e-a068-5169ab8bcb15"}); // TODO get actual user id
 
-  if (!responseLocation || !responseGame) {
+  if (!responseLocation) {
     showMessage('Error initializing game. Please try again later.', 'error');
     return;
   }
@@ -75,9 +86,33 @@ async function initMap() {
     sessionStorage.setItem('guessData', JSON.stringify(guessData));
     const result = await getResult(guessData);
     sessionStorage.setItem('result', JSON.stringify(result));
-    const updatedGame = await updateScore(responseGame.id, result.score);
+    const updatedGame = await updateScore(gameId, result.score);
 
-    window.location.href = '/result.html';
+    const guessPayload = {
+      gameId: gameId,
+      locationId: responseLocation.id,
+      guessedLatitude: selectedCoords.lat,
+      guessedLongitude: selectedCoords.lng,
+      distanceKm: result.distance,
+      score: result.score
+    };
+
+    const createdGuess = await postGuess(guessPayload);
+
+    if (currentRound < totalRounds) {
+      currentRound++;
+      sessionStorage.setItem('currentRound', currentRound);
+      allResults.push(result);
+      sessionStorage.setItem('allResults', JSON.stringify(allResults));
+      window.location.reload();
+    } else {
+      sessionStorage.removeItem('currentRound');
+      allResults.push(result);
+      sessionStorage.setItem('allResults', JSON.stringify(allResults));
+      const finishedGame = await finishGame();
+      sessionStorage.removeItem('gameId');
+      window.location.href = '/result.html';
+    }
   })
 }
 
@@ -160,3 +195,38 @@ async function updateScore(gameId, score) {
     return null;
   }
 }
+
+async function postGuess(data) {
+  try {
+    const response = await fetch("api/Guess", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    const guess = await response.json();
+    return guess;
+  } catch (error) {
+    console.error('Error posting guess:', error);
+    return null;
+  }
+}
+
+async function finishGame() {
+  let gameId = sessionStorage.getItem('gameId');
+  try {
+    const response = await fetch(`api/Game/${gameId}/finish`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    const finishedGame = await response.json();
+    return finishedGame;
+  } catch (error) {
+    console.error('Error finishing game:', error);
+    return null;
+  }
+}
+
