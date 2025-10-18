@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -48,7 +49,7 @@ public class GuessController : ControllerBase
             Score = dto.Score
         };
 
-        var existingGuesses = _context.Guesses.Where(g => g.GameId == dto.GameId).Count(); // LINQ
+        var existingGuesses = await _context.Guesses.CountAsync(g => g.GameId == dto.GameId); // Async LINQ
         guess.RoundNumber = existingGuesses + 1;
 
         _context.Guesses.Add(guess);
