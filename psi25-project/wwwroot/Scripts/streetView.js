@@ -110,6 +110,8 @@ async function initMap() {
       allResults.push(result);
       sessionStorage.setItem('allResults', JSON.stringify(allResults));
       const finishedGame = await finishGame();
+      const totalScore = await fetchTotalScore(gameId);
+      sessionStorage.setItem('totalScore', totalScore);
       sessionStorage.removeItem('gameId');
       window.location.href = '/result.html';
     }
@@ -228,5 +230,11 @@ async function finishGame() {
     console.error('Error finishing game:', error);
     return null;
   }
+}
+
+async function fetchTotalScore(gameId) {
+    const response = await fetch(`/api/Game/${gameId}/total-score`);
+    if (!response.ok) return 0;
+    return await response.json();
 }
 

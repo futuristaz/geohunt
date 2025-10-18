@@ -14,10 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('round-result').appendChild(div);
     });
 
-    const totalScore = allResults.reduce((sum, r) => sum + r.score, 0);
+    const totalScore = parseInt(sessionStorage.getItem('totalScore')) || 0;
     const overallDiv = document.createElement('div');
     overallDiv.innerHTML = `<h2>Total Score: ${totalScore} points</h2>`;
     document.getElementById('overall-result').appendChild(overallDiv);
 
     sessionStorage.removeItem('allResults');
+    sessionStorage.removeItem('totalScore');
 });

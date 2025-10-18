@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 
@@ -86,5 +87,14 @@ public class GameController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(game);
+    }
+
+    [HttpGet("{id}/total-score")]
+    public async Task<ActionResult<int>> GetTotalScore(Guid id)
+    {
+        var totalScore = await _context.Guesses
+            .Where(g => g.GameId == id)
+            .SumAsync(g => (int?)g.Score) ?? 0;
+        return Ok(totalScore);
     }
 }
