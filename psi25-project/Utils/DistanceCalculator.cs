@@ -1,9 +1,9 @@
-using psi25_project.Models.Dtos;
+using psi25_project.Models;
 using psi25_project.Extensions;
 
 public static class DistanceCalculator
 {
-    public static double CalculateHaversineDistance(GeocodeResultDto coords1, GeocodeResultDto coords2, int precision=2)
+    public static double CalculateHaversineDistance(Coordinate coords1, Coordinate coords2, int precision=2)
     {
         const int R = 6371000; // Earth's radius in meters
 

@@ -21,6 +21,31 @@ public class LocationsController : ControllerBase
         return await _context.Locations.ToListAsync();
     }
 
+    [HttpGet("recent")]
+    public async Task<ActionResult> GetRecentLocations()
+    {
+        // Fetch from database using Entity Framework (LINQ to Entities)
+        var allLocations = await _context.Locations.ToListAsync();
+
+        // Apply LINQ to Objects on the in-memory list
+        var recentLocations = allLocations
+            .Where(l => l.LastPlayedAt > DateTime.UtcNow.AddMonths(-6))  // Filter: played in last 6 months
+            .OrderByDescending(l => l.LastPlayedAt)                       // Sort: most recent first
+            .Take(20)                                                     // Limit: top 20
+            .Select(l => new                                              // Project: transform to anonymous type
+            {
+                l.Id,
+                l.Latitude,
+                l.Longitude,
+                l.panoId,
+                l.LastPlayedAt,
+                DaysSinceLastPlayed = (DateTime.UtcNow - l.LastPlayedAt).Days
+            })
+            .ToList();
+
+        return Ok(recentLocations);
+    }
+
     [HttpPost]
     public async Task<ActionResult<Location>> CreateLocation([FromBody] LocationDto dto)
     {
