@@ -1,16 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const gameData = JSON.parse(sessionStorage.getItem('guessData'));
-    const distance = sessionStorage.getItem('distance');
-    console.log('Distance from sessionStorage:', distance);
+    const allResults = JSON.parse(sessionStorage.getItem('allResults')) || [];
 
-    if (!gameData) {
-        console.error('No game data found in sessionstorage');
-        return;
-    };
+    allResults.forEach((result, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+            <h3>Round ${i + 1}</h3>
+            <p>Initial coordinates: (${result.initialCoords.lat.toFixed(4)}, ${result.initialCoords.lng.toFixed(4)})</p>
+            <p>Guessed coordinates: (${result.guessedCoords.lat.toFixed(4)}, ${result.guessedCoords.lng.toFixed(4)})</p>
+            <p>Distance: ${result.distance} kilometers</p>
+            <p>Score: ${result.score} points</p>
+            <hr/>
+        `;
+        document.getElementById('round-result').appendChild(div);
+    });
 
-    document.getElementById('init-lat').textContent = `Initial Latitude: ${gameData.initialCoords.lat.toFixed(5)}`;
-    document.getElementById('init-lng').textContent = `Initial Longitude: ${gameData.initialCoords.lng.toFixed(5)}`;
-    document.getElementById('guessed-lat').textContent = `Guessed Latitude: ${gameData.guessedCoords.lat.toFixed(5)}`;
-    document.getElementById('guessed-lng').textContent = `Guessed Longitude: ${gameData.guessedCoords.lng.toFixed(5)}`;
-    document.getElementById('distance').textContent = `Distance: ${distance} kilometers`;
+    const totalScore = parseInt(sessionStorage.getItem('totalScore')) || 0;
+    const overallDiv = document.createElement('div');
+    overallDiv.innerHTML = `<h2>Total Score: ${totalScore} points</h2>`;
+    document.getElementById('overall-result').appendChild(overallDiv);
+
+    sessionStorage.removeItem('allResults');
+    sessionStorage.removeItem('totalScore');
 });

@@ -18,7 +18,7 @@ namespace psi25_project.Controllers
 
             try
             {
-                var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, 2);
+                var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, precision: 2);
                 var score = ScoreCalculator.CalculateGeoScore(distance);
                 return Ok(new
                 {
