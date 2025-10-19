@@ -54,5 +54,9 @@ public class GeoHuntContext : DbContext
         modelBuilder.Entity<Game>()
             .Property(g => g.StartedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
     }
 }
