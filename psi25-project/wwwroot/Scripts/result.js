@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.innerHTML = `
             <h3>Round ${i + 1}</h3>
-            <p>Initial coordinates: (${result.initialCoords.lat}, ${result.initialCoords.lng})</p>
-            <p>Guessed coordinates: (${result.guessedCoords.lat}, ${result.guessedCoords.lng})</p>
+            <p>Initial coordinates: (${result.initialCoords.lat.toFixed(4)}, ${result.initialCoords.lng.toFixed(4)})</p>
+            <p>Guessed coordinates: (${result.guessedCoords.lat.toFixed(4)}, ${result.guessedCoords.lng.toFixed(4)})</p>
             <p>Distance: ${result.distance} kilometers</p>
             <p>Score: ${result.score} points</p>
             <hr/>
