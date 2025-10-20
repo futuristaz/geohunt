@@ -28,9 +28,7 @@ namespace psi25_project.Services
                 })
                 .ToListAsync();
 
-            // Sort by score descending
-            entries = entries.OrderByDescending(e => e.Score).ThenBy(e => e.DistanceKm).ToList();
-
+            entries.Sort();
             // Assign rank
             for (int i = 0; i < entries.Count; i++)
                 entries[i].Rank = i + 1;
