@@ -24,26 +24,24 @@ public class LocationsController : ControllerBase
     [HttpGet("recent")]
     public async Task<ActionResult> GetRecentLocations()
     {
-        // Fetch from database using Entity Framework (LINQ to Entities)
-        var allLocations = await _context.Locations.ToListAsync();
+        var cutoffUtc = DateTime.UtcNow.AddMonths(-6);
 
-        // Apply LINQ to Objects on the in-memory list
-        var recentLocations = allLocations
-            .Where(l => l.LastPlayedAt > DateTime.UtcNow.AddMonths(-6))  // Filter: played in last 6 months
-            .OrderByDescending(l => l.LastPlayedAt)                       // Sort: most recent first
-            .Take(20)                                                     // Limit: top 20
-            .Select(l => new                                              // Project: transform to anonymous type
-            {
-                l.Id,
-                l.Latitude,
-                l.Longitude,
-                l.panoId,
-                l.LastPlayedAt,
-                DaysSinceLastPlayed = (DateTime.UtcNow - l.LastPlayedAt).Days
-            })
-            .ToList();
+        var result = await _context.Locations
+    .AsNoTracking()
+    .Where(l => l.LastPlayedAt > cutoffUtc)
+    .OrderByDescending(l => l.LastPlayedAt)
+    .Take(20)
+    .Select(l => new
+    {
+        l.Id,
+        l.Latitude,
+        l.Longitude,
+        l.panoId,
+        l.LastPlayedAt,
+    })
+    .ToListAsync();
 
-        return Ok(recentLocations);
+        return Ok(result);
     }
 
     [HttpPost]
