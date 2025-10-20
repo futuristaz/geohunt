@@ -21,6 +21,29 @@ public class LocationsController : ControllerBase
         return await _context.Locations.ToListAsync();
     }
 
+    [HttpGet("recent")]
+    public async Task<ActionResult> GetRecentLocations()
+    {
+        var cutoffUtc = DateTime.UtcNow.AddMonths(-6);
+
+        var result = await _context.Locations
+    .AsNoTracking()
+    .Where(l => l.LastPlayedAt > cutoffUtc)
+    .OrderByDescending(l => l.LastPlayedAt)
+    .Take(20)
+    .Select(l => new
+    {
+        l.Id,
+        l.Latitude,
+        l.Longitude,
+        l.panoId,
+        l.LastPlayedAt,
+    })
+    .ToListAsync();
+
+        return Ok(result);
+    }
+
     [HttpPost]
     public async Task<ActionResult<Location>> CreateLocation([FromBody] LocationDto dto)
     {
