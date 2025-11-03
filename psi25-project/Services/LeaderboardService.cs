@@ -19,21 +19,27 @@ namespace psi25_project.Services
         public async Task<List<LeaderboardEntry>> GetTopLeaderboardAsync(int top = 20)
         {
             var entries = await _context.Guesses
+                .Include(g => g.Game)
+                .ThenInclude(game => game.User)
                 .Select(g => new LeaderboardEntry
                 {
                     Id = g.Id,
                     DistanceKm = g.DistanceKm,
                     GuessedAt = g.GuessedAt,
-                    Score = g.Score
+                    TotalScore = g.Score,
+                    UserId = g.Game.User.Id,
+                    Username = g.Game.User.Username
                 })
+                .OrderByDescending(x => x.TotalScore)
+                .Take(top)
                 .ToListAsync();
 
             entries.Sort();
-            // Assign rank
+
             for (int i = 0; i < entries.Count; i++)
                 entries[i].Rank = i + 1;
 
-            return entries.Take(top).ToList();
+            return entries;
         }
     }
 }
