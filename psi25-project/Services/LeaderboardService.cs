@@ -41,5 +41,42 @@ namespace psi25_project.Services
 
             return entries;
         }
+
+        public async Task<List<LeaderboardEntry>> GetTopPlayersAsync(int top = 20)
+        {
+            var entries = await _context.Guesses
+                .Include(g => g.Game)
+                .ThenInclude(game => game.User)
+                .GroupBy(g => new
+                {
+                    g.Game.UserId,
+                    g.Game.User.Username
+                })
+                .Select(group => new LeaderboardEntry
+                {
+                    UserId = group.Key.UserId,
+                    Username = group.Key.Username,
+                    TotalScore = group.Max(g => g.Score),
+                    DistanceKm = group
+                        .OrderByDescending(g => g.Score)
+                        .ThenBy(g => g.DistanceKm)
+                        .Select(g => g.DistanceKm)
+                        .FirstOrDefault(),
+                    GuessedAt = group
+                        .OrderByDescending(g => g.Score)
+                        .ThenBy(g => g.DistanceKm)
+                        .Select(g => g.GuessedAt)
+                        .FirstOrDefault()
+                })
+                .OrderByDescending(x => x.TotalScore)
+                .Take(top)
+                .ToListAsync();
+
+            for (int i = 0; i < entries.Count; i++)
+                entries[i].Rank = i + 1;
+
+            return entries;
+        }
+
     }
 }
