@@ -23,7 +23,7 @@ private readonly SignInManager<ApplicationUser> _signInManager;
         if (!ModelState.IsValid)  
             return BadRequest(ModelState);  
 
-        var user = new ApplicationUser { UserName = model.Username, Email = model.Email };  
+        var user = new ApplicationUser { UserName = model.Username, Email = model.Email, CreatedAt = DateTime.UtcNow };  
         var result = await _userManager.CreateAsync(user, model.Password);  
 
         if (result.Succeeded)  
