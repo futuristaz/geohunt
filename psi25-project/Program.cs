@@ -14,6 +14,15 @@ builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<GeocodingService>();
 
+builder.Services.AddCors(o =>
+{
+    o.AddDefaultPolicy(p => p
+        .WithOrigins("http://localhost:5042")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
+
+
 
 var app = builder.Build();
 
@@ -28,7 +37,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseHttpsRedirection();
+app.UseCors();
+app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapFallbackToFile("/index.html"); // SPA routing in prod
+
 
 app.Run();

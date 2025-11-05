@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Default dark background and readable default text color for the whole app */
+html, body {
+	height: 100%;
+	margin: 0;
+	background-color: #0b1220; /* dark slate */
+	color: #e6eef8; /* light text */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+/* Ensure root elements inherit the default text color */
+#root {
+	min-height: 100%;
+}
