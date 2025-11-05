@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using psi25_project.Models;
 
 namespace psi25_project.Controllers
 {
@@ -7,10 +8,10 @@ namespace psi25_project.Controllers
 [Route("api/[controller]")]
 public class AccountController : ControllerBase
 {
-private readonly UserManager<IdentityUser> _userManager;
-private readonly SignInManager<IdentityUser> _signInManager;
+private readonly UserManager<ApplicationUser> _userManager;
+private readonly SignInManager<ApplicationUser> _signInManager;
 
-    public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)  
+    public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)  
     {  
         _userManager = userManager;  
         _signInManager = signInManager;  
@@ -22,7 +23,7 @@ private readonly SignInManager<IdentityUser> _signInManager;
         if (!ModelState.IsValid)  
             return BadRequest(ModelState);  
 
-        var user = new IdentityUser { UserName = model.Username, Email = model.Email };  
+        var user = new ApplicationUser { UserName = model.Username, Email = model.Email };  
         var result = await _userManager.CreateAsync(user, model.Password);  
 
         if (result.Succeeded)  

@@ -1,112 +1,114 @@
-
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using User = psi25_project.Models.User;
-using Game = psi25_project.Models.Game;
+using Microsoft.EntityFrameworkCore;
+using psi25_project.Models;
 using psi25_project.Models.Dtos;
+using psi25_project.Data;
 
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly GeoHuntContext _context;
 
-    public UserController(GeoHuntContext context)
+    public UserController(
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        GeoHuntContext context)
     {
+        _userManager = userManager;
+        _signInManager = signInManager;
         _context = context;
     }
 
+    // -------------------- Get All Users --------------------
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+    public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsers()
     {
-        return await _context.Users.ToListAsync();
+        var users = await _userManager.Users
+            .Select(u => new UserResponseDto
+            {
+                Username = u.UserName,
+                CreatedAt = u.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(users);
     }
 
+    // -------------------- Get Single User --------------------
     [HttpGet("{id}")]
-    public async Task<ActionResult<User>> GetUser(Guid id)
+    public async Task<ActionResult<UserResponseDto>> GetUser(Guid id)
     {
-        var user = await _context.Users.FindAsync(id);
-
+        var user = await _userManager.FindByIdAsync(id.ToString());
         if (user == null)
-        {
             return NotFound();
-        }
 
-        return user;
+        return new UserResponseDto
+        {
+            Username = user.UserName,
+            CreatedAt = user.CreatedAt
+        };
     }
 
+    // -------------------- Register New User --------------------
     [HttpPost]
-    public async Task<ActionResult<User>> CreateUser([FromBody] RegisterUserDto dto)
+    public async Task<ActionResult<UserResponseDto>> CreateUser([FromBody] RegisterUserDto dto)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
-        var user = new User
+        var existingUser = await _userManager.FindByNameAsync(dto.Username);
+        if (existingUser != null)
+            return BadRequest("Username already exists.");
+
+        var user = new ApplicationUser
         {
-            Id = Guid.NewGuid(),
-            Username = dto.Username,
-            Games = new List<Game>(),
+            UserName = dto.Username,
             CreatedAt = DateTime.UtcNow
         };
 
-        var passwordHasher = new PasswordHasher<User>();
-        user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
+        var result = await _userManager.CreateAsync(user, dto.Password);
 
-        try
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        return Ok(new UserResponseDto
         {
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return Ok(new UserResponseDto {
-                Username = user.Username,
-                CreatedAt = user.CreatedAt
-            });
-        }
-        catch (DbUpdateException ex)
-        {
-            return BadRequest("Unable to create user. Please check your input. Error: " + ex.Message);
-        }
+            Username = user.UserName,
+            CreatedAt = user.CreatedAt
+        });
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
-    {
-        var user = await _context.Users.FindAsync(id);
-        if (user == null)
-        {
-            return NotFound("User not found.");
-        }
-
-        _context.Users.Remove(user);
-        await _context.SaveChangesAsync();
-
-        return Ok($"User {user.Id} deleted successfully.");
-    }
-
+    // -------------------- Login --------------------
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginUserDto dto)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
-        var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == dto.Username);
-        if (user == null)
-        {
+        var result = await _signInManager.PasswordSignInAsync(dto.Username, dto.Password, false, false);
+
+        if (!result.Succeeded)
             return Unauthorized("Invalid username or password.");
-        }
-
-        var passwordHasher = new PasswordHasher<User>();
-        var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
-
-        if (verificationResult == PasswordVerificationResult.Failed)
-        {
-            return Unauthorized("Invalid username or password.");
-        }
 
         return Ok("Login successful.");
+    }
+
+    // -------------------- Delete User --------------------
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        var user = await _userManager.FindByIdAsync(id.ToString());
+        if (user == null)
+            return NotFound("User not found.");
+
+        var result = await _userManager.DeleteAsync(user);
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        return Ok($"User {user.UserName} deleted successfully.");
     }
 }

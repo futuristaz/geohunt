@@ -4,6 +4,8 @@ using psi25_project.Models.Dtos;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using psi25_project.Data;
+
 
 namespace psi25_project.Services
 {
@@ -28,7 +30,7 @@ namespace psi25_project.Services
                     GuessedAt = g.GuessedAt,
                     TotalScore = g.Score,
                     UserId = g.Game.User.Id,
-                    Username = g.Game.User.Username
+                    Username = g.Game.User.UserName
                 })
                 .OrderByDescending(x => x.TotalScore)
                 .Take(top)
