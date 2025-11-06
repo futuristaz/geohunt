@@ -19,6 +19,7 @@ builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Your domain services
+builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<GeocodingService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
