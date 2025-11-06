@@ -12,24 +12,10 @@ export default function Start() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-                onClick={() => navigate('/game?rounds=1')}
+                onClick={() => navigate('/game')}
                 className="px-6 py-3 bg-transparent border border-white font-semibold rounded-xl hover:bg-white/10 transition"
             >
                 1 round
-            </button>
-
-            <button
-                onClick={() => navigate('/game?rounds=3')}
-                className="px-6 py-3 bg-transparent border border-white font-semibold rounded-xl hover:bg-white/10 transition"
-            >
-                3 rounds
-            </button>
-
-            <button
-                onClick={() => navigate('/game?rounds=5')}
-                className="px-6 py-3 bg-transparent border border-white font-semibold rounded-xl hover:bg-white/10 transition"
-            >
-                5 rounds
             </button>
         </div>
       </section>
