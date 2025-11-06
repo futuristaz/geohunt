@@ -7,5 +7,6 @@ namespace psi25_project.Services
     public interface ILeaderboardService
     {
         Task<List<LeaderboardEntry>> GetTopLeaderboardAsync(int top = 20);
+        Task<List<LeaderboardEntry>> GetTopPlayersAsync(int top = 20);
     }
 }

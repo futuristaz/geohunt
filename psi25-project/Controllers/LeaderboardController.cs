@@ -15,11 +15,18 @@ namespace psi25_project.Controllers
             _leaderboardService = leaderboardService;
         }
 
-        [HttpGet]
+        [HttpGet("top-scores")]
         public async Task<ActionResult> GetLeaderboard()
         {
             var leaderboard = await _leaderboardService.GetTopLeaderboardAsync();
             return Ok(leaderboard);
+        }
+        
+        [HttpGet("top-players")]
+        public async Task<IActionResult> GetTopPlayers([FromQuery] int top = 20)
+        {
+            var result = await _leaderboardService.GetTopPlayersAsync(top);
+            return Ok(result);
         }
     }
 }
