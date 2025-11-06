@@ -1,8 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using psi25_project.Data;
-
 #nullable disable
 
 namespace psi25_project.Migrations

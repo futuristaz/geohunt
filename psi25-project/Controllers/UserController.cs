@@ -82,7 +82,7 @@ namespace psi25_project.Controllers
 
         // -------------------- Delete User --------------------
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(Guid id)
         {
             var user = await _userManager.FindByIdAsync(id.ToString());
