@@ -5,17 +5,16 @@ declare global {
 }
 
 import { useEffect, useRef, useState } from 'react';
+import MiniMap from '../components/Minimap';
 
 interface Coordinates {
   lat: number;
   lng: number;
 }
 
-interface ApiResponse {
-  modifiedCoordinates: {
-    lat: string | number;
-    lng: string | number;
-  };
+interface GeocodingApiResponse {
+  modifiedCoordinates: Coordinates;
+  panoID: string;
 }
 
 const StreetViewApp = () => {
@@ -60,7 +59,7 @@ const StreetViewApp = () => {
           throw new Error(`API request failed: ${response.status}`);
         }
 
-        const data: ApiResponse = await response.json();
+        const data: GeocodingApiResponse = await response.json();
         console.log('Received coordinates:', data);
 
         // Convert to numbers and validate
@@ -86,6 +85,15 @@ const StreetViewApp = () => {
         });
 
         setLoading(false);
+
+        await fetch('/api/Locations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ latitude: lat, longitude: lng, panoId: data.panoID }),
+        });
+
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load Street View';
         setError(errorMessage);
@@ -139,6 +147,18 @@ return (
           </div>
         </div>
       )}
+
+      <div className="absolute bottom-4 right-4 z-9999">
+        <MiniMap
+          initialZoom={1}
+          onSelect={(coords) => {
+            // do something with coords.lat / coords.lng
+            console.log("Picked:", coords);
+          }}
+          className="rounded overflow-hidden shadow-lg border border-red-500"
+          style={{ width: 300, height: 200 }}
+        />
+      </div>
     </div>
   );
 };
