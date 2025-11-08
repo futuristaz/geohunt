@@ -7,7 +7,7 @@ declare global {
 
 import { useEffect, useRef, useState } from 'react';
 import MiniMap from '../components/Minimap';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface Coordinates {
   lat: number;
@@ -20,13 +20,27 @@ interface GeocodingApiResponse {
   panoID: string;
 }
 
-interface GameApiResponse {
-  id: string;
-  userId: string;
+type GameStateFromStart = {
+  gameId: string;
+  totalRounds: number;
+  currentRound: number; // starts at 1
+};
+
+type GuessPostResponse = {
+  guess: {
+    id: string;
+    gameId: string;
+    locationId: number;
+    roundNumber: number;
+    guessedLatitude: number;
+    guessedLongitude: number;
+    distanceKm: number;
+    score: number;
+  };
+  finished: boolean;
+  currentRound: number; // new current round (advanced or same if finished)
   totalScore: number;
-  startedAt: string;
-  finishedAt: string | null;
-}
+};
 
 const StreetViewApp = () => {
   const streetViewRef = useRef<HTMLDivElement>(null);
@@ -41,87 +55,106 @@ const StreetViewApp = () => {
   const [gameId, setGameId] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<number | null>(null);
 
+  const [round, setRound] = useState<number>(1);
+  const [totalRounds, setTotalRounds] = useState<number>(3);
   const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // ---- read state passed from Start.tsx ----
+  useEffect(() => {
+    const s = (location.state || {}) as Partial<GameStateFromStart>;
+    if (!s.gameId) {
+      navigate('/start', { replace: true });
+      return;
+    }
+    setGameId(s.gameId);
+    setRound(s.currentRound ?? 1);
+    setTotalRounds(s.totalRounds ?? 3);
+  }, [location.state, navigate]);
+
+  // ---- utility: wait for Google Maps ----
+  const waitGoogleMaps = () =>
+    new Promise<void>((resolve, reject) => {
+      const start = Date.now();
+      const tick = () => {
+        if (window.google?.maps) return resolve();
+        if (Date.now() - start > 15000)
+          return reject(new Error('Google Maps API not loaded'));
+        setTimeout(tick, 100);
+      };
+      tick();
+    });
+
+  // ---- load a new location: fetch coords, init/retarget pano, persist Location ----
+  const loadRoundLocation = async () => {
+    // 1) Fetch coordinates for this round
+    const coordsRes = await fetch('/api/geocoding/valid_coords');
+    if (!coordsRes.ok) throw new Error(`Coords API failed: ${coordsRes.status}`);
+    const coordsData: GeocodingApiResponse = await coordsRes.json();
+
+    const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
+    const lng = parseFloat(String(coordsData.modifiedCoordinates.lng));
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      throw new Error('Invalid coordinates received from API');
+    }
+    const position: Coordinates = { lat, lng };
+
+    // 2) Init/retarget Street View
+    if (!panoRef.current) {
+      panoRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current!, {
+        position,
+        pov: { heading: 0, pitch: 0 },
+        zoom: 1,
+        addressControl: false,
+        fullscreenControl: false,
+        imageDateControl: false,
+        showRoadLabels: false,
+      });
+    } else {
+      panoRef.current.setPosition(position);
+      panoRef.current.setPov({ heading: 0, pitch: 0 });
+      panoRef.current.setZoom(1);
+    }
+
+    // 3) Persist Location for this round
+    const locRes = await fetch('/api/Locations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude: lat, longitude: lng, panoId: coordsData.panoID }),
+    });
+    if (!locRes.ok) throw new Error(`Location API failed: ${locRes.status}`);
+    const locData = await locRes.json();
+
+    // 4) Update UI state
+    setInitialCoords(position);
+    setLocationId(locData.id);
+    setSelectedCoords(null);
+  };
+
+  // ---- initial mount: wait for maps, mount pano and first round location ----
   useEffect(() => {
     if (isInitializedRef.current) return;
     isInitializedRef.current = true;
 
-    const initializeStreetView = async () => {
+    (async () => {
       try {
-        // Wait for Google Maps (max ~15s)
-        await new Promise<void>((resolve, reject) => {
-          const start = Date.now();
-          const wait = () => {
-            if (window.google?.maps) return resolve();
-            if (Date.now() - start > 15000)
-              return reject(new Error('Google Maps API not loaded'));
-            setTimeout(wait, 100);
-          };
-          wait();
-        });
-
-        if (!streetViewRef.current) {
-          throw new Error('Street View container not mounted');
-        }
-
-        // 1) Fetch coordinates
-        const coordsRes = await fetch('/api/geocoding/valid_coords');
-        if (!coordsRes.ok) throw new Error(`API request failed: ${coordsRes.status}`);
-        const coordsData: GeocodingApiResponse = await coordsRes.json();
-
-        const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
-        const lng = parseFloat(String(coordsData.modifiedCoordinates.lng));
-        if (Number.isNaN(lat) || Number.isNaN(lng)) {
-          throw new Error('Invalid coordinates received from API');
-        }
-        const position: Coordinates = { lat, lng };
-        setInitialCoords(position);
-
-        // 2) Start a new game (check .ok before json)
-        const gameRes = await fetch('/api/Game', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: 'f5f925f5-4345-474e-a068-5169ab8bcb15' }),
-        });
-        if (!gameRes.ok) throw new Error(`Game API request failed: ${gameRes.status}`);
-        const gameData: GameApiResponse = await gameRes.json();
-        setGameId(gameData.id);
-
-        // 3) Init Street View with the freshly fetched position
-        panoRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current, {
-          position,
-          pov: { heading: 0, pitch: 0 },
-          zoom: 1,
-          addressControl: false,
-          fullscreenControl: false,
-          imageDateControl: false,
-          showRoadLabels: false,
-        });
-
-        // 4) Persist the location (so guesses can reference it)
-        const locRes = await fetch('/api/Locations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ latitude: lat, longitude: lng, panoId: coordsData.panoID }),
-        });
-        if (!locRes.ok) throw new Error(`Location API request failed: ${locRes.status}`);
-        const locData = await locRes.json();
-        setLocationId(locData.id);
-
+        await waitGoogleMaps();
+        if (!streetViewRef.current) throw new Error('Street View container not mounted');
+        await loadRoundLocation();
         setLoading(false);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load Street View';
-        setError(errorMessage);
+        const msg = err instanceof Error ? err.message : 'Failed to load Street View';
+        setError(msg);
         setLoading(false);
-        console.error('Street View initialization error:', err);
+        console.error('Street View init error:', err);
       }
-    };
-
-    initializeStreetView();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---- submit guess: score, post Guess, advance or finish ----
   const handleSubmitGuess = async () => {
     if (!selectedCoords || !initialCoords || !gameId || !locationId) {
       console.error('Missing required data:', { selectedCoords, initialCoords, gameId, locationId });
@@ -131,24 +164,16 @@ const StreetViewApp = () => {
     try {
       setSubmitting(true);
 
-      // 1) Score this guess
+      // A) score this guess
       const resultResponse = await fetch('/api/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guessedCoords: selectedCoords, initialCoords }),
       });
-      if (!resultResponse.ok) throw new Error('Failed to submit guess');
-      const resultData = await resultResponse.json(); // { score, distanceKm }
+      if (!resultResponse.ok) throw new Error('Failed to score guess');
+      const resultData: { score: number; distance: number } = await resultResponse.json();
 
-      // 2) Update total score on game
-      const updateScoreResponse = await fetch(`/api/Game/${gameId}/score`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(resultData.score),
-      });
-      if (!updateScoreResponse.ok) throw new Error('Failed to update score');
-
-      // 3) Persist guess
+      // B) create guess (server updates total score, advances round, sets finished)
       const guessRes = await fetch('/api/Guess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -163,27 +188,25 @@ const StreetViewApp = () => {
       });
       if (!guessRes.ok) throw new Error('Failed to store guess');
 
-      // 4) Finish game
-      const finishRes = await fetch(`/api/Game/${gameId}/finish`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!finishRes.ok) throw new Error('Failed to finish game');
+      const guessData: GuessPostResponse = await guessRes.json();
 
-      // 5) Navigate to Results with helpful state
-      navigate(`/results/${gameId}`, {
-        state: {
-          gameId,
-          lastScore: resultData.score,
-          lastDistanceKm: resultData.distance,
-          selectedCoords,
-          initialCoords,
-        },
-        replace: true,
-      });
+      if (guessData.finished) {
+        // FINISHED → go to results
+        navigate(`/results/${gameId}`, {
+          state: {
+            gameId,
+          },
+          replace: true,
+        });
+        return;
+      }
+
+      // NOT FINISHED → advance to next round
+      setRound(guessData.currentRound);
+      await loadRoundLocation();
     } catch (e) {
       console.error(e);
-      alert((e as Error).message || 'Failed to finish the game');
+      alert((e as Error).message || 'Failed to submit this round');
     } finally {
       setSubmitting(false);
     }
@@ -191,6 +214,11 @@ const StreetViewApp = () => {
 
   return (
     <div className="relative h-screen w-screen">
+      {/* Round/Score badge */}
+      <div className="absolute top-3 left-3 z-50 rounded bg-black/60 text-white px-3 py-2 text-sm">
+        Round {round} / {totalRounds}
+      </div>
+
       {/* Street View container */}
       <div ref={streetViewRef} className="h-full w-full" />
 
@@ -227,7 +255,7 @@ const StreetViewApp = () => {
           initialZoom={1}
           onSelect={(coords) => {
             setSelectedCoords(coords);
-            console.log('Selected coords from MiniMap:', coords);
+            // console.log('Selected coords from MiniMap:', coords);
           }}
           className="overflow-hidden shadow-lg rounded-xl"
           style={{ width: 300, height: 200 }}

@@ -10,5 +10,7 @@ namespace psi25_project.Models.Dtos
         public double GuessedLongitude { get; set; }
         public double DistanceKm { get; set; }
         public int Score { get; set; }
+        public double ActualLatitude { get; set; }
+        public double ActualLongitude { get; set; }
     }
 }

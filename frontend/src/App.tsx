@@ -11,6 +11,8 @@ export default function App() {
       <Route path="/start" element={<Start />} />
       <Route path="/game" element={<Game />} />
       <Route path="/results/:gameId" element={<Results />} />
+      <Route path="*" element={<div className="p-6">404 - Page Not Found</div>} />
+      <Route path="/results" element={<Results/>}/>
     </Routes>
   )
 }

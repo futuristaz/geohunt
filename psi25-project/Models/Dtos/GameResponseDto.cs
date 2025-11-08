@@ -7,5 +7,7 @@ namespace psi25_project.Models.Dtos
         public int TotalScore { get; set; }
         public DateTime StartedAt { get; set; }
         public DateTime? FinishedAt { get; set; }
+        public int CurrentRound { get; set; }
+        public int TotalRounds { get; set; }
     }
 }

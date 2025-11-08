@@ -249,7 +249,7 @@ export default function MiniMap({
   }
 
   return (
-    <div className={className} style={style}>
+    <div className={className} style={{ ...style, position: 'relative', overflow: 'hidden' }}>
       {isLoading && (
         <div style={{
           position: "absolute",
@@ -259,7 +259,8 @@ export default function MiniMap({
           justifyContent: "center",
           background: "#f0f0f0",
           fontSize: 14,
-          color: "#666"
+          color: "#666",
+          zIndex: 10
         }}>
           Loading map...
         </div>
@@ -268,7 +269,7 @@ export default function MiniMap({
         ref={containerRef}
         style={{ position: "absolute", inset: 0 }}
       />
-      {/* {selected && (
+      {selected && (
         <div
           style={{
             position: "absolute",
@@ -284,7 +285,7 @@ export default function MiniMap({
         >
           {selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}
         </div>
-      )} */}
+      )}
     </div>
   );
 }
