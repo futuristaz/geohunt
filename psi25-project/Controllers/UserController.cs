@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using psi25_project.Models.Dtos;
 
 [ApiController]
@@ -13,6 +14,7 @@ public class UserController : ControllerBase
     }
 
     // -------------------- Get All Users --------------------
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<IActionResult> GetUsers()
     {
@@ -30,6 +32,7 @@ public class UserController : ControllerBase
     }
 
     // -------------------- Get Specific User --------------------
+    [Authorize(Roles = "Admin")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUser(Guid id)
     {
@@ -39,6 +42,7 @@ public class UserController : ControllerBase
     }
 
     // -------------------- Delete User --------------------
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id)
     {

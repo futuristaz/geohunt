@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using psi25_project.Models.Dtos;
 using psi25_project.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace psi25_project.Controllers
 {
@@ -50,6 +51,7 @@ namespace psi25_project.Controllers
             return Ok(new { Message = "User logged out successfully." });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("assign-admin")]
         public async Task<IActionResult> AssignAdmin([FromBody] AssignRoleDto model)
         {
