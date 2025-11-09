@@ -22,6 +22,7 @@ builder.Services.AddDbContext<GeoHuntContext>(options =>
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<GeocodingService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<UserService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -71,6 +72,15 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors();
 app.UseDefaultFiles();
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider
+        .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+    await RoleSeeder.SeedRoles(roleManager);
+}
+
+
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();

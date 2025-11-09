@@ -1,99 +1,55 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using psi25_project.Data;
-using psi25_project.Models;
+using Microsoft.AspNetCore.Authorization;
 using psi25_project.Models.Dtos;
+using psi25_project.Services;
 
-namespace psi25_project.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class UserController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    //TODO - implement authorization
-    //[Authorize] // require login for all user-related actions (optional)
-    public class UserController : ControllerBase
+    private readonly UserService _userService;
+
+    public UserController(UserService userService)
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly GeoHuntContext _context;
+        _userService = userService;
+    }
 
-        public UserController(UserManager<ApplicationUser> userManager, GeoHuntContext context)
-        {
-            _userManager = userManager;
-            _context = context;
-        }
+    // -------------------- Get All Users --------------------
+    [Authorize(Roles = "Admin")]
+    [HttpGet]
+    public async Task<IActionResult> GetUsers()
+    {
+        var users = await _userService.GetAllUsersAsync();
+        return Ok(users);
+    }
 
-        // -------------------- Get All Users --------------------
-        [HttpGet]
-        //[Authorize(Roles = "Admin")] // only admins can view all users
-        public async Task<ActionResult<IEnumerable<UserAccountDto>>> GetUsers()
-        {
-            var users = await _userManager.Users
-                .Select(u => new UserAccountDto
-                {
-                    Id = u.Id,
-                    Username = u.UserName,
-                    Email = u.Email,
-                    CreatedAt = u.CreatedAt
-                })
-                .ToListAsync();
+    // -------------------- Get Current User --------------------
+    [HttpGet("me")]
+    public async Task<IActionResult> GetCurrentUser()
+    {
+        var user = await _userService.GetCurrentUserAsync(User);
+        if (user == null) return Unauthorized("User is not logged in.");
+        return Ok(user);
+    }
 
-            return Ok(users);
-        }
+    // -------------------- Get Specific User --------------------
+    [Authorize(Roles = "Admin")]
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUser(Guid id)
+    {
+        var user = await _userService.GetUserByIdAsync(id);
+        if (user == null) return NotFound("User not found.");
+        return Ok(user);
+    }
 
-        // -------------------- Get Current User --------------------
-        [HttpGet("me")]
-        public async Task<ActionResult<UserAccountDto>> GetCurrentUser()
-        {
-            var username = User.Identity?.Name;
-            if (string.IsNullOrEmpty(username))
-                return Unauthorized("User is not logged in.");
+    // -------------------- Delete User --------------------
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        var (succeeded, errors) = await _userService.DeleteUserAsync(id);
+        if (!succeeded) return BadRequest(new { Errors = errors });
 
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null)
-                return NotFound("User not found.");
-
-            return new UserAccountDto
-            {
-                Id = user.Id,
-                Username = user.UserName,
-                Email = user.Email,
-                CreatedAt = user.CreatedAt
-            };
-        }
-
-        // -------------------- Get Specific User (Admin only) --------------------
-        [HttpGet("{id}")]
-        //[Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserAccountDto>> GetUser(Guid id)
-        {
-            var user = await _userManager.FindByIdAsync(id.ToString());
-            if (user == null)
-                return NotFound("User not found.");
-
-            return new UserAccountDto
-            {
-                Id = user.Id,
-                Username = user.UserName,
-                Email = user.Email,
-                CreatedAt = user.CreatedAt
-            };
-        }
-
-        // -------------------- Delete User --------------------
-        [HttpDelete("{id}")]
-        //[Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteUser(Guid id)
-        {
-            var user = await _userManager.FindByIdAsync(id.ToString());
-            if (user == null)
-                return NotFound("User not found.");
-
-            var result = await _userManager.DeleteAsync(user);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
-
-            return Ok($"User {user.UserName} deleted successfully.");
-        }
+        return Ok(new { Message = $"User {id} deleted successfully" });
     }
 }
