@@ -226,6 +226,9 @@ namespace psi25_project.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CurrentRound")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -233,6 +236,9 @@ namespace psi25_project.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("TotalRounds")
+                        .HasColumnType("integer");
 
                     b.Property<int>("TotalScore")
                         .HasColumnType("integer");

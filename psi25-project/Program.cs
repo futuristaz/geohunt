@@ -37,6 +37,15 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 .AddEntityFrameworkStores<GeoHuntContext>()
 .AddDefaultTokenProviders();
 
+builder.Services.AddCors(o =>
+{
+    o.AddDefaultPolicy(p => p
+        .WithOrigins("http://localhost:5042")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
+
+
 
 // Configure login/logout cookie behavior
 builder.Services.ConfigureApplicationCookie(options =>
@@ -60,6 +69,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseHttpsRedirection();
+app.UseCors();
+app.UseDefaultFiles();
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider
@@ -74,5 +86,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapFallbackToFile("/index.html"); // SPA routing in prod
+
 
 app.Run();

@@ -16,7 +16,7 @@ public class GameController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult> CreateGame([FromBody] CreateGameDto dto)
+    public async Task<ActionResult> StartGame([FromBody] CreateGameDto dto)
     {
         if (!ModelState.IsValid)
         {
@@ -34,21 +34,25 @@ public class GameController : ControllerBase
             Id = Guid.NewGuid(),
             UserId = dto.UserId,
             User = user,
-            TotalScore = 0, 
+            TotalScore = 0,
             StartedAt = DateTime.UtcNow,
-            FinishedAt = null
+            FinishedAt = null,
+            TotalRounds = dto.TotalRounds <= 0 ? 3 : dto.TotalRounds,
+            CurrentRound = 1
         };
 
         _context.Games.Add(game);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(CreateGame), new { id = game.Id }, new GameResponseDto
+        return CreatedAtAction(nameof(StartGame), new { id = game.Id }, new GameResponseDto
         {
             Id = game.Id,
             UserId = game.UserId,
             TotalScore = game.TotalScore,
             StartedAt = game.StartedAt,
-            FinishedAt = game.FinishedAt
+            FinishedAt = game.FinishedAt,
+            CurrentRound = game.CurrentRound,
+            TotalRounds = game.TotalRounds
         });
 
     }
@@ -93,9 +97,34 @@ public class GameController : ControllerBase
     [HttpGet("{id}/total-score")]
     public async Task<ActionResult<int>> GetTotalScore(Guid id)
     {
-        var totalScore = await _context.Guesses
-            .Where(g => g.GameId == id)
-            .SumAsync(g => (int?)g.Score) ?? 0;
-        return Ok(totalScore);
+        var game = await _context.Games.FindAsync(id);
+        if (game == null)
+        {
+            return NotFound("Game not found");
+        }
+        return Ok(game.TotalScore);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<GameResponseDto>> GetGameById(Guid id)
+    {
+        var game = await _context.Games.FindAsync(id);
+        if (game == null)
+        {
+            return NotFound("Game not found");
+        }
+
+        var gameDto = new GameResponseDto
+        {
+            Id = game.Id,
+            UserId = game.UserId,
+            TotalScore = game.TotalScore,
+            StartedAt = game.StartedAt,
+            FinishedAt = game.FinishedAt,
+            CurrentRound = game.CurrentRound,
+            TotalRounds = game.TotalRounds
+        };
+
+        return Ok(gameDto);
     }
 }
