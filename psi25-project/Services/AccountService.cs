@@ -25,6 +25,12 @@ namespace psi25_project.Services
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
+
+            if (!result.Succeeded)
+                return (false, result.Errors);
+
+            await _userManager.AddToRoleAsync(user, "Player"); //all newly registered users will have 'Player' role
+
             return (result.Succeeded, result.Errors);
         }
 
@@ -40,6 +46,18 @@ namespace psi25_project.Services
         public async Task LogoutAsync()
         {
             await _signInManager.SignOutAsync();
+        }
+
+        public async Task<(bool Succeeded, IEnumerable<string>? Errors)> AssignAdminAsync(Guid userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return (false, new[] { "User not found" });
+
+            if (!await _userManager.IsInRoleAsync(user, "Admin"))
+                await _userManager.AddToRoleAsync(user, "Admin");
+
+            return (true, null);
         }
     }
 }

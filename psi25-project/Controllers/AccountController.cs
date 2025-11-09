@@ -49,5 +49,16 @@ namespace psi25_project.Controllers
             await _accountService.LogoutAsync();
             return Ok(new { Message = "User logged out successfully." });
         }
+
+        [HttpPost("assign-admin")]
+        public async Task<IActionResult> AssignAdmin([FromBody] AssignRoleDto model)
+        {
+            var (succeeded, errors) = await _accountService.AssignAdminAsync(model.UserId);
+
+            if (!succeeded)
+                return BadRequest(new { Errors = errors });
+
+            return Ok(new { Message = $"User with ID {model.UserId} is now an Admin" });
+        }
     }
 }

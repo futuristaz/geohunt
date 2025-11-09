@@ -59,6 +59,15 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider
+        .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+    await RoleSeeder.SeedRoles(roleManager);
+}
+
+
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
