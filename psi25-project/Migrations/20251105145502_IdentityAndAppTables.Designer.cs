@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using psi25_project.Data;
@@ -11,9 +12,11 @@ using psi25_project.Data;
 namespace psi25_project.Migrations
 {
     [DbContext(typeof(GeoHuntContext))]
-    partial class GeoHuntContextModelSnapshot : ModelSnapshot
+    [Migration("20251105145502_IdentityAndAppTables")]
+    partial class IdentityAndAppTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -226,9 +229,6 @@ namespace psi25_project.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("CurrentRound")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -236,9 +236,6 @@ namespace psi25_project.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("TotalRounds")
-                        .HasColumnType("integer");
 
                     b.Property<int>("TotalScore")
                         .HasColumnType("integer");

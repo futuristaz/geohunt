@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
+using psi25_project.Data;
 using Microsoft.EntityFrameworkCore;
+
 
 [ApiController]
 [Route("api/[controller]")]

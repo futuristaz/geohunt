@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using Location = psi25_project.Models.Location;
+using psi25_project.Data;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -19,6 +20,29 @@ public class LocationsController : ControllerBase
     public async Task<ActionResult<IEnumerable<Location>>> GetLocations()
     {
         return await _context.Locations.ToListAsync();
+    }
+
+    [HttpGet("recent")]
+    public async Task<ActionResult> GetRecentLocations()
+    {
+        var cutoffUtc = DateTime.UtcNow.AddMonths(-6);
+
+        var result = await _context.Locations
+    .AsNoTracking()
+    .Where(l => l.LastPlayedAt > cutoffUtc)
+    .OrderByDescending(l => l.LastPlayedAt)
+    .Take(20)
+    .Select(l => new
+    {
+        l.Id,
+        l.Latitude,
+        l.Longitude,
+        l.panoId,
+        l.LastPlayedAt,
+    })
+    .ToListAsync();
+
+        return Ok(result);
     }
 
     [HttpPost]
