@@ -1,16 +1,19 @@
 using Microsoft.AspNetCore.Identity;
 
-public static class RoleSeeder
+namespace psi25_project.Models
 {
-    public static async Task SeedRoles(RoleManager<IdentityRole<Guid>> roleManager)
+    public static class RoleSeeder
     {
-        string[] roles = new[] { "Admin", "Player" };
-
-        foreach (var role in roles)
+        public static async Task SeedRoles(RoleManager<IdentityRole<Guid>> roleManager)
         {
-            if (!await roleManager.RoleExistsAsync(role))
-                await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+            string[] roles = new[] { "Admin", "Player" };
+
+            foreach (var role in roles)
+            {
+                if (!await roleManager.RoleExistsAsync(role))
+                    await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+            }
         }
-    }
+    } 
 }
 
