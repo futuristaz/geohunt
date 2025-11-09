@@ -1,10 +1,38 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Home() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [username, setUsername] = useState('');
+
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const res = await fetch('/api/User/me', {
+          method: 'GET',
+          credentials: 'include' // include cookies for authentication
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setLoggedIn(true);
+          setUsername(data.username);
+        } else {
+          setLoggedIn(false);
+          navigate('/login', { replace: true });
+        }
+      } catch (error) {
+        console.error('Error checking login status:', error);
+        setLoggedIn(false);
+        navigate('/login', { replace: true });
+      }
+    };
+    checkLogin();
+  }, [navigate])
 
   return (
     <main className="text-white flex flex-col items-center justify-center">
+      <h1>{username}</h1>
       <section className="text-center p-8">
         <h1 className="text-5xl font-extrabold mb-4">
           Welcome to GeoHunt 🌍

@@ -17,7 +17,7 @@ type GameResponseDto = {
   totalRounds: number;
 };
 
-const DEFAULT_USER_ID = "f5f925f5-4345-474e-a068-5169ab8bcb15"; // replace with real user id
+const DEFAULT_USER_ID = "019a6a1e-d51a-731d-917a-171fdcf9d9b7"; // replace with real user id
 
 export default function Start() {
   const [rounds, setRounds] = useState(3);     // default selection
