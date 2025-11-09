@@ -15,14 +15,14 @@ namespace psi25_project.Migrations
                 table: "Games",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 1);
 
             migrationBuilder.AddColumn<int>(
                 name: "TotalRounds",
                 table: "Games",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 3);
         }
 
         /// <inheritdoc />

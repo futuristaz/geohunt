@@ -81,7 +81,9 @@ public class GuessController : ControllerBase
                 GuessedLatitude = guess.GuessedLatitude,
                 GuessedLongitude = guess.GuessedLongitude,
                 DistanceKm = guess.DistanceKm,
-                Score = guess.Score
+                Score = guess.Score,
+                ActualLatitude = location.Latitude,
+                ActualLongitude = location.Longitude
             },
             finished = isLastRound,
             currentRound = game.CurrentRound, // if finished, this will equal TotalRounds (or roundNumber+1 if you prefer)
@@ -93,7 +95,6 @@ public class GuessController : ControllerBase
     public async Task<ActionResult<IEnumerable<GuessResponseDto>>> GetGuessesForGame(Guid gameId)
     {
         var guesses = await _context.Guesses
-                .Include(g => g.Location) // Include the related Location
                 .Where(g => g.GameId == gameId)
                 .Select(g => new GuessResponseDto
                 {
