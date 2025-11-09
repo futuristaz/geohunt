@@ -28,19 +28,24 @@ namespace psi25_project.Controllers
         //[Authorize(Roles = "Admin")] // only admins can view all users
         public async Task<ActionResult<IEnumerable<UserAccountDto>>> GetUsers()
         {
-            var users = await _userManager.Users
-                .Select(u => new UserAccountDto
+            var users = await _userManager.Users.ToListAsync();
+
+            var userDtos = new List<UserAccountDto>();
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                userDtos.Add(new UserAccountDto
                 {
-                    Id = u.Id,
-                    Username = u.UserName,
-                    Email = u.Email,
-                    CreatedAt = u.CreatedAt
-                })
-                .ToListAsync();
+                    Id = user.Id,
+                    Username = user.UserName,
+                    Email = user.Email,
+                    CreatedAt = user.CreatedAt,
+                    Roles = roles
+                });
+            }
 
-            return Ok(users);
+            return Ok(userDtos);
         }
-
         // -------------------- Get Current User --------------------
         [HttpGet("me")]
         public async Task<ActionResult<UserAccountDto>> GetCurrentUser()
@@ -53,12 +58,15 @@ namespace psi25_project.Controllers
             if (user == null)
                 return NotFound("User not found.");
 
+            var roles = await _userManager.GetRolesAsync(user);
+
             return new UserAccountDto
             {
                 Id = user.Id,
                 Username = user.UserName,
                 Email = user.Email,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                Roles = roles
             };
         }
 
@@ -71,12 +79,15 @@ namespace psi25_project.Controllers
             if (user == null)
                 return NotFound("User not found.");
 
+            var roles = await _userManager.GetRolesAsync(user);
+
             return new UserAccountDto
             {
                 Id = user.Id,
                 Username = user.UserName,
                 Email = user.Email,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                Roles = roles
             };
         }
 
