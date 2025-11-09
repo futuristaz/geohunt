@@ -22,6 +22,7 @@ builder.Services.AddDbContext<GeoHuntContext>(options =>
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<GeocodingService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<UserService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
