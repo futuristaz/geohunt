@@ -42,9 +42,9 @@ builder.Services.AddCors(o =>
     o.AddDefaultPolicy(p => p
         .WithOrigins("http://localhost:5042")
         .AllowAnyHeader()
-        .AllowAnyMethod());
+        .AllowAnyMethod()
+        .AllowCredentials());
 });
-
 
 
 // Configure login/logout cookie behavior
@@ -53,6 +53,36 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/Login";
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
+
+    options.Cookie.SameSite = SameSiteMode.Lax;
+
+    options.Events.OnRedirectToLogin = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            ctx.Response.StatusCode = 401;
+            return Task.CompletedTask;
+        }
+        else
+        {
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
+
+    options.Events.OnRedirectToAccessDenied = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            ctx.Response.StatusCode = 403;
+            return Task.CompletedTask;
+        }
+        else
+        {
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // ---------------- Build App ----------------
@@ -69,9 +99,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseCors();
 app.UseDefaultFiles();
+app.UseStaticFiles();
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider
@@ -80,8 +111,6 @@ using (var scope = app.Services.CreateScope())
     await RoleSeeder.SeedRoles(roleManager);
 }
 
-
-app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
