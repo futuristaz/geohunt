@@ -9,5 +9,7 @@ namespace psi25_project.Models
         public DateTime StartedAt { get; set; }
         public DateTime? FinishedAt { get; set; }
         public List<Guess> Guesses { get; set; } = new();
+        public int CurrentRound { get; set; } = 1;
+        public int TotalRounds { get; set; } = 3;
     }   
 }
