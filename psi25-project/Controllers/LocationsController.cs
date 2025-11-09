@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using Location = psi25_project.Models.Location;
+using psi25_project.Data;
 
 [ApiController]
 [Route("api/[controller]")]
