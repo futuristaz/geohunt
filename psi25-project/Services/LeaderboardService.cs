@@ -52,12 +52,12 @@ namespace psi25_project.Services
                 .GroupBy(g => new
                 {
                     g.Game.UserId,
-                    g.Game.User.Username
+                    g.Game.User.UserName
                 })
                 .Select(group => new LeaderboardEntry
                 {
                     UserId = group.Key.UserId,
-                    Username = group.Key.Username,
+                    Username = group.Key.UserName,
                     TotalScore = group.Max(g => g.Score),
                     DistanceKm = group
                         .OrderByDescending(g => g.Score)
