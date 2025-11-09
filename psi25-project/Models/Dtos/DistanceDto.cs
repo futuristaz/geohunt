@@ -1,8 +1,10 @@
+using psi25_project.Models;
+
 namespace psi25_project.Models.Dtos
 {
     public class DistanceDto
     {
-        public required GeocodeResultDto initialCoords { get; set; }
-        public required GeocodeResultDto guessedCoords { get; set; }
+        public required Coordinate initialCoords { get; set; }
+        public required Coordinate guessedCoords { get; set; }
     }
 }

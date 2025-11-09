@@ -1,62 +1,64 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using psi25_project.Models;
 
-public class GeoHuntContext : DbContext
+namespace psi25_project.Data
 {
-    public GeoHuntContext(DbContextOptions<GeoHuntContext> options) : base(options) { }
-
-    public DbSet<psi25_project.Models.Location> Locations { get; set; }
-    public DbSet<Game> Games { get; set; }
-    public DbSet<Guess> Guesses { get; set; }
-    public DbSet<User> Users { get; set; }
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public class GeoHuntContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
     {
-        base.OnModelCreating(modelBuilder);
+        public GeoHuntContext (DbContextOptions<GeoHuntContext> options)
+            : base(options)
+        {
+        }
 
-        // --- User ↔ Game (one-to-many) ---
-        modelBuilder.Entity<User>()
-            .HasMany(u => u.Games)
-            .WithOne(g => g.User)
-            .HasForeignKey(g => g.UserId)
-            .OnDelete(DeleteBehavior.Cascade); // deletes user's games if user deleted
+        // All domain tables here
+        public DbSet<Location> Locations { get; set; }
+        public DbSet<Game> Games { get; set; }
+        public DbSet<Guess> Guesses { get; set; }
 
-        // --- Game ↔ Guess (one-to-many) ---
-        modelBuilder.Entity<Game>()
-            .HasMany(g => g.Guesses)
-            .WithOne(gu => gu.Game)
-            .HasForeignKey(gu => gu.GameId)
-            .OnDelete(DeleteBehavior.Cascade); // deletes game's guesses if game deleted
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
 
-        // --- Guess ↔ Location (many-to-one) ---
-        modelBuilder.Entity<Guess>()
-            .HasOne(gu => gu.Location)
-            .WithMany(l => l.Guesses)
-            .HasForeignKey(gu => gu.LocationId)
-            .OnDelete(DeleteBehavior.Restrict); // prevents deleting location if it has guesses
+            // --- Game ↔ User (one-to-many)
+            modelBuilder.Entity<Game>()
+                .HasOne(g => g.User)
+                .WithMany(u => u.Games)
+                .HasForeignKey(g => g.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<psi25_project.Models.Location>()
-            .HasIndex(l => new { l.Latitude, l.Longitude })
-            .IsUnique();
+            // --- Game ↔ Guess (one-to-many)
+            modelBuilder.Entity<Game>()
+                .HasMany(g => g.Guesses)
+                .WithOne(gu => gu.Game)
+                .HasForeignKey(gu => gu.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<User>()
-            .Property(u => u.CreatedAt)
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            // --- Guess ↔ Location (many-to-one)
+            modelBuilder.Entity<Guess>()
+                .HasOne(gu => gu.Location)
+                .WithMany(l => l.Guesses)
+                .HasForeignKey(gu => gu.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<psi25_project.Models.Location>()
-            .Property(l => l.CreatedAt)
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            // --- Unique coordinates
+            modelBuilder.Entity<Location>()
+                .HasIndex(l => new { l.Latitude, l.Longitude })
+                .IsUnique();
 
-        modelBuilder.Entity<Guess>()
-            .Property(g => g.GuessedAt)
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            // --- Default timestamps
+            modelBuilder.Entity<Location>()
+                .Property(l => l.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        modelBuilder.Entity<Game>()
-            .Property(g => g.StartedAt)
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            modelBuilder.Entity<Guess>()
+                .Property(g => g.GuessedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        modelBuilder.Entity<User>()
-            .HasIndex(u => u.Username)
-            .IsUnique();
+            modelBuilder.Entity<Game>()
+                .Property(g => g.StartedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        }
     }
 }

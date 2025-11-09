@@ -1,112 +1,99 @@
-
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using User = psi25_project.Models.User;
-using Game = psi25_project.Models.Game;
+using psi25_project.Data;
+using psi25_project.Models;
 using psi25_project.Models.Dtos;
 
-[ApiController]
-[Route("api/[controller]")]
-public class UserController : ControllerBase
+namespace psi25_project.Controllers
 {
-    private readonly GeoHuntContext _context;
-
-    public UserController(GeoHuntContext context)
+    [ApiController]
+    [Route("api/[controller]")]
+    //TODO - implement authorization
+    //[Authorize] // require login for all user-related actions (optional)
+    public class UserController : ControllerBase
     {
-        _context = context;
-    }
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly GeoHuntContext _context;
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetUsers()
-    {
-        return await _context.Users.ToListAsync();
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<User>> GetUser(Guid id)
-    {
-        var user = await _context.Users.FindAsync(id);
-
-        if (user == null)
+        public UserController(UserManager<ApplicationUser> userManager, GeoHuntContext context)
         {
-            return NotFound();
+            _userManager = userManager;
+            _context = context;
         }
 
-        return user;
-    }
-
-    [HttpPost]
-    public async Task<ActionResult<User>> CreateUser([FromBody] RegisterUserDto dto)
-    {
-        if (!ModelState.IsValid)
+        // -------------------- Get All Users --------------------
+        [HttpGet]
+        //[Authorize(Roles = "Admin")] // only admins can view all users
+        public async Task<ActionResult<IEnumerable<UserAccountDto>>> GetUsers()
         {
-            return BadRequest(ModelState);
+            var users = await _userManager.Users
+                .Select(u => new UserAccountDto
+                {
+                    Id = u.Id,
+                    Username = u.UserName,
+                    Email = u.Email,
+                    CreatedAt = u.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(users);
         }
 
-        var user = new User
+        // -------------------- Get Current User --------------------
+        [HttpGet("me")]
+        public async Task<ActionResult<UserAccountDto>> GetCurrentUser()
         {
-            Id = Guid.NewGuid(),
-            Username = dto.Username,
-            Games = new List<Game>(),
-            CreatedAt = DateTime.UtcNow
-        };
+            var username = User.Identity?.Name;
+            if (string.IsNullOrEmpty(username))
+                return Unauthorized("User is not logged in.");
 
-        var passwordHasher = new PasswordHasher<User>();
-        user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null)
+                return NotFound("User not found.");
 
-        try
-        {
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return Ok(new UserResponseDto {
-                Username = user.Username,
+            return new UserAccountDto
+            {
+                Id = user.Id,
+                Username = user.UserName,
+                Email = user.Email,
                 CreatedAt = user.CreatedAt
-            });
+            };
         }
-        catch (DbUpdateException ex)
+
+        // -------------------- Get Specific User (Admin only) --------------------
+        [HttpGet("{id}")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<ActionResult<UserAccountDto>> GetUser(Guid id)
         {
-            return BadRequest("Unable to create user. Please check your input. Error: " + ex.Message);
-        }
-    }
+            var user = await _userManager.FindByIdAsync(id.ToString());
+            if (user == null)
+                return NotFound("User not found.");
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
-    {
-        var user = await _context.Users.FindAsync(id);
-        if (user == null)
+            return new UserAccountDto
+            {
+                Id = user.Id,
+                Username = user.UserName,
+                Email = user.Email,
+                CreatedAt = user.CreatedAt
+            };
+        }
+
+        // -------------------- Delete User --------------------
+        [HttpDelete("{id}")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteUser(Guid id)
         {
-            return NotFound("User not found.");
+            var user = await _userManager.FindByIdAsync(id.ToString());
+            if (user == null)
+                return NotFound("User not found.");
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+                return BadRequest(result.Errors);
+
+            return Ok($"User {user.UserName} deleted successfully.");
         }
-
-        _context.Users.Remove(user);
-        await _context.SaveChangesAsync();
-
-        return Ok($"User {user.Id} deleted successfully.");
-    }
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginUserDto dto)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == dto.Username);
-        if (user == null)
-        {
-            return Unauthorized("Invalid username or password.");
-        }
-
-        var passwordHasher = new PasswordHasher<User>();
-        var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
-
-        if (verificationResult == PasswordVerificationResult.Failed)
-        {
-            return Unauthorized("Invalid username or password.");
-        }
-
-        return Ok("Login successful.");
     }
 }
