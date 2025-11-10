@@ -27,7 +27,7 @@ export default function SignUp() {
         } else {
           // Login failed
           const data = await res.json();
-          setError(data.message || 'Login failed. Please check your credentials.');
+          setError(data.message || 'Signup failed. Please check your credentials.');
         }
       } catch (err) {
         console.error('Login error:', err);
