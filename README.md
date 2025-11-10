@@ -1,4 +1,4 @@
-# psi25-project
+# geohunt
 
 ### Primary ideas for the project
 - [x] Guessing Mechanism
