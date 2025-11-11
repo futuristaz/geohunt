@@ -3,6 +3,8 @@ import Home from './pages/Home'
 import Start from './pages/Start'
 import Game from './pages/Game'
 import Results from './pages/Results'
+import Signup from './pages/Signup'
+import Login from './pages/Login'
 
 export default function App() {
   return (
@@ -13,6 +15,8 @@ export default function App() {
       <Route path="/results/:gameId" element={<Results />} />
       <Route path="*" element={<div className="p-6">404 - Page Not Found</div>} />
       <Route path="/results" element={<Results/>}/>
+      <Route path="/signup" element={<Signup/>}/>
+      <Route path="/login" element={<Login/>}/>
     </Routes>
   )
 }
