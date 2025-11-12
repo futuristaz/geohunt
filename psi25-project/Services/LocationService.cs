@@ -14,12 +14,13 @@ namespace psi25_project.Services
             _context = context;
         }
 
-        public async Task<LocationDto?> GetOldestLocationAsync()
+        public async Task<FallbackLocationDto?> GetOldestLocationAsync()
         {
             var result = await _context.Locations
                 .OrderBy(l => l.LastPlayedAt)
-                .Select(l => new LocationDto
+                .Select(l => new FallbackLocationDto
                 {
+                    id = l.Id,
                     Longitude = l.Longitude,
                     Latitude = l.Latitude,
                     panoId = l.panoId,

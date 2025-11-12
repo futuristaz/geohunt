@@ -31,6 +31,7 @@ namespace psi25_project.Services
 
                 return (true, new
                 {
+                    locationfromDb.id,
                     source = "database",
                     address = "fallback",
                     modifiedCoordinates = new
