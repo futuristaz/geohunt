@@ -22,16 +22,13 @@ builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IAccountService, AccountService>();
-// GAME controller
 builder.Services.AddScoped<IGameRepository, GameRepository>();
 builder.Services.AddScoped<IGameService, GameService>();
-
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
 builder.Services.AddScoped<IGeocodingService, GeocodingService>();
-
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
-
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IResultService, ResultService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
