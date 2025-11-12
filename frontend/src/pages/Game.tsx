@@ -100,8 +100,18 @@ const StreetViewApp = () => {
       await fetch(`/api/Locations/${coordsData.id}/last-played`, {
         method: 'PATCH'
       });
+      setLocationId(coordsData.id)
     } else {
       console.log("Using generated location");
+      // 2) Persist Location for this round
+      const locRes = await fetch('/api/Locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: parseFloat(String(coordsData.modifiedCoordinates.lat)), longitude: parseFloat(String(coordsData.modifiedCoordinates.lng)), panoId: coordsData.panoID }),
+      });
+      if (!locRes.ok) throw new Error(`Location API failed: ${locRes.status}`);
+      const locData = await locRes.json();
+      setLocationId(locData.id);
     }
 
     const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
@@ -111,7 +121,7 @@ const StreetViewApp = () => {
     }
     const position: Coordinates = { lat, lng };
 
-    // 2) Init/retarget Street View
+    // 3) Init/retarget Street View
     if (!panoRef.current) {
       panoRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current!, {
         position,
@@ -128,18 +138,8 @@ const StreetViewApp = () => {
       panoRef.current.setZoom(1);
     }
 
-    // 3) Persist Location for this round
-    const locRes = await fetch('/api/Locations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ latitude: lat, longitude: lng, panoId: coordsData.panoID }),
-    });
-    if (!locRes.ok) throw new Error(`Location API failed: ${locRes.status}`);
-    const locData = await locRes.json();
-
     // 4) Update UI state
     setInitialCoords(position);
-    setLocationId(locData.id);
     setSelectedCoords(null);
   };
 
