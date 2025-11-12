@@ -1,5 +1,5 @@
 // src/pages/Start.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 type CreateGameDto = {
@@ -17,20 +17,40 @@ type GameResponseDto = {
   totalRounds: number;
 };
 
-const DEFAULT_USER_ID = "f5f925f5-4345-474e-a068-5169ab8bcb15"; // replace with real user id
-
 export default function Start() {
   const [rounds, setRounds] = useState(3);     // default selection
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string>('');
   const navigate = useNavigate();
+
+  useEffect(() => {getUser();}, []);
+
+  const getUser = async () => {
+    try {
+      const res = await fetch('/api/User/me', {
+        method: 'GET',
+        credentials: 'include' // include cookies for authentication
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserId(data.id);
+      } else {
+        navigate('/login', { replace: true });
+      }
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      navigate('/login', { replace: true });
+    }
+  };
 
   const handleStart = async () => {
     setErr(null);
     setLoading(true);
+    getUser();
     try {
       const payload: CreateGameDto = {
-        userId: DEFAULT_USER_ID,
+        userId: userId,
         totalRounds: rounds,
       };
 
