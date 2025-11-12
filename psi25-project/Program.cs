@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using psi25_project;
 using psi25_project.Gateways;
+using psi25_project.Gateways.Interfaces;
 using psi25_project.Services;
 using psi25_project.Services.Interfaces;
 using psi25_project.Repositories;
@@ -25,7 +26,9 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IGameRepository, GameRepository>();
 builder.Services.AddScoped<IGameService, GameService>();
 
-builder.Services.AddScoped<GeocodingService>();
+builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
+builder.Services.AddScoped<IGeocodingService, GeocodingService>();
+
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<UserService>();
 

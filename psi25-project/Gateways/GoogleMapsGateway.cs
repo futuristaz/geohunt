@@ -1,12 +1,14 @@
+using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using psi25_project.Gateways.Interfaces;
 using psi25_project.Models.Dtos;
 
 namespace psi25_project.Gateways
 {
-    public class GoogleMapsGateway
+    public class GoogleMapsGateway : IGoogleMapsGateway
     {
         private readonly string _apiKey;
         private readonly HttpClient _httpClient;
@@ -18,7 +20,6 @@ namespace psi25_project.Gateways
                       ?? throw new Exception("Google Maps API key not found in environment variables.");
         }
 
-        // ------------------------------------------------------------------
         public async Task<GeocodeResultDto> GetCoordinatesAsync(string address)
         {
             string url = $"https://maps.googleapis.com/maps/api/geocode/json?address={Uri.EscapeDataString(address)}&key={_apiKey}";
@@ -29,9 +30,9 @@ namespace psi25_project.Gateways
 
             using var doc = JsonDocument.Parse(content);
             var location = doc.RootElement
-                .GetProperty("results")[0]
-                .GetProperty("geometry")
-                .GetProperty("location");
+                              .GetProperty("results")[0]
+                              .GetProperty("geometry")
+                              .GetProperty("location");
 
             return new GeocodeResultDto
             {
@@ -40,7 +41,6 @@ namespace psi25_project.Gateways
             };
         }
 
-        // ------------------------------------------------------------------
         public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng)
         {
             string url = $"https://maps.googleapis.com/maps/api/streetview/metadata?location={lat},{lng}&key={_apiKey}";
