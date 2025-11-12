@@ -67,6 +67,7 @@ namespace psi25_project.Services
                     {
                         return (true, new
                         {
+                            source = "generated",
                             address,
                             modifiedCoordinates = new { lat, lng },
                             panoID = streetView.PanoId,

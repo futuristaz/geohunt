@@ -16,6 +16,7 @@ interface Coordinates {
 
 interface GeocodingApiResponse {
   id: number;
+  source: string;
   modifiedCoordinates: Coordinates;
   panoID: string;
 }
@@ -93,6 +94,15 @@ const StreetViewApp = () => {
     const coordsRes = await fetch('/api/geocoding/valid_coords');
     if (!coordsRes.ok) throw new Error(`Coords API failed: ${coordsRes.status}`);
     const coordsData: GeocodingApiResponse = await coordsRes.json();
+    if (coordsData.source === "database") {
+      console.log("Using fallback location from db");
+
+      await fetch(`/api/Locations/${coordsData.id}/last-played`, {
+        method: 'PATCH'
+      });
+    } else {
+      console.log("Using generated location");
+    }
 
     const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
     const lng = parseFloat(String(coordsData.modifiedCoordinates.lng));
