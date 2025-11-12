@@ -30,6 +30,8 @@ builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
+builder.Services.AddScoped<IGuessRepository, GuessRepository>();
+builder.Services.AddScoped<IGuessService, GuessService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>

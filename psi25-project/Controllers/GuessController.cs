@@ -1,20 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
-using psi25_project.Models;
 using psi25_project.Models.Dtos;
-using psi25_project.Data;
-using Microsoft.EntityFrameworkCore;
-
+using psi25_project.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
-
 public class GuessController : ControllerBase
 {
-    private readonly GeoHuntContext _context;
+    private readonly IGuessService _guessService;
 
-    public GuessController(GeoHuntContext context)
+    public GuessController(IGuessService guessService)
     {
-        _context = context;
+        _guessService = guessService;
     }
 
     [HttpPost]
@@ -23,97 +22,32 @@ public class GuessController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        await using var tx = await _context.Database.BeginTransactionAsync();
-
-        var game = await _context.Games.SingleOrDefaultAsync(g => g.Id == dto.GameId);
-        if (game == null)
-            return NotFound("Game not found");
-
-        if (game.FinishedAt != null)
-            return BadRequest("Game is already finished");
-
-        var location = await _context.Locations.FindAsync(dto.LocationId);
-        if (location == null)
-            return NotFound("Location not found");
-
-        // Use the authoritative current round from Game
-        var roundNumber = game.CurrentRound;
-
-        var guess = new Guess
+        try
         {
-            GameId = dto.GameId,
-            Game = game,
-            LocationId = dto.LocationId,
-            Location = location,
-            RoundNumber = roundNumber,
-            GuessedAt = DateTime.UtcNow,
-            GuessedLatitude = dto.GuessedLatitude,
-            GuessedLongitude = dto.GuessedLongitude,
-            DistanceKm = dto.DistanceKm,
-            Score = dto.Score
-        };
+            var (guessDto, finished, currentRound, totalScore) = await _guessService.CreateGuessAsync(dto);
 
-        _context.Guesses.Add(guess);
-
-        // Update game aggregate
-        game.TotalScore += dto.Score;
-
-        var isLastRound = roundNumber >= game.TotalRounds;
-        if (isLastRound)
-        {
-            game.FinishedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            game.CurrentRound = roundNumber + 1;
-        }
-
-        await _context.SaveChangesAsync();
-        await tx.CommitAsync();
-
-        // Return a richer payload the client can act on
-        return CreatedAtAction(nameof(CreateGuess), new { id = guess.Id }, new
-        {
-            guess = new GuessResponseDto
+            return CreatedAtAction(nameof(CreateGuess), new { id = guessDto.Id }, new
             {
-                Id = guess.Id,
-                GameId = guess.GameId,
-                LocationId = guess.LocationId,
-                RoundNumber = guess.RoundNumber,
-                GuessedLatitude = guess.GuessedLatitude,
-                GuessedLongitude = guess.GuessedLongitude,
-                DistanceKm = guess.DistanceKm,
-                Score = guess.Score,
-                ActualLatitude = location.Latitude,
-                ActualLongitude = location.Longitude
-            },
-            finished = isLastRound,
-            currentRound = game.CurrentRound, // if finished, this will equal TotalRounds (or roundNumber+1 if you prefer)
-            totalScore = game.TotalScore
-        });
+                guess = guessDto,
+                finished,
+                currentRound,
+                totalScore
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("{gameId}")]
     public async Task<ActionResult<IEnumerable<GuessResponseDto>>> GetGuessesForGame(Guid gameId)
     {
-        var guesses = await _context.Guesses
-                .Where(g => g.GameId == gameId)
-                .Select(g => new GuessResponseDto
-                {
-                    Id = g.Id,
-                    GameId = g.GameId,
-                    LocationId = g.LocationId,
-                    RoundNumber = g.RoundNumber,
-                    GuessedLatitude = g.GuessedLatitude,
-                    GuessedLongitude = g.GuessedLongitude,
-                    DistanceKm = g.DistanceKm,
-                    Score = g.Score,
-                    // Add location data
-                    ActualLatitude = g.Location.Latitude,
-                    ActualLongitude = g.Location.Longitude
-                })
-                .ToListAsync();
-
+        var guesses = await _guessService.GetGuessesForGameAsync(gameId);
         return Ok(guesses);
     }
 }
