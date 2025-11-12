@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Routing.Tree;
 using Microsoft.Extensions.Configuration;
 using psi25_project.Models.Dtos;
 
@@ -19,13 +20,13 @@ namespace psi25_project.Gateways
         }
 
         // ------------------------------------------------------------------
-        public async Task<GeocodeResultDto> GetCoordinatesAsync(string address)
+        public async Task<GeocodeResultDto> GetCoordinatesAsync(string address, CancellationToken cancellationToken = default)
         {
             string url = $"https://maps.googleapis.com/maps/api/geocode/json?address={Uri.EscapeDataString(address)}&key={_apiKey}";
-            HttpResponseMessage response = await _httpClient.GetAsync(url);
+            HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            string content = await response.Content.ReadAsStringAsync();
+            string content = await response.Content.ReadAsStringAsync(cancellationToken);
 
             using var doc = JsonDocument.Parse(content);
             var location = doc.RootElement
@@ -41,13 +42,13 @@ namespace psi25_project.Gateways
         }
 
         // ------------------------------------------------------------------
-        public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng)
+        public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng, CancellationToken cancellationToken = default)
         {
             string url = $"https://maps.googleapis.com/maps/api/streetview/metadata?location={lat},{lng}&key={_apiKey}";
-            HttpResponseMessage response = await _httpClient.GetAsync(url);
+            HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            string content = await response.Content.ReadAsStringAsync();
+            string content = await response.Content.ReadAsStringAsync(cancellationToken);
             var metadata = JsonSerializer.Deserialize<StreetViewMetadataDto>(content);
 
             if (metadata?.Status == "OK" && metadata.Location != null)

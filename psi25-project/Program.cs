@@ -23,6 +23,7 @@ builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<GeocodingService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<LocationService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
