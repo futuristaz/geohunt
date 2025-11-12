@@ -1,129 +1,80 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
-using psi25_project.Data;
+using psi25_project.Services.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
 public class GameController : ControllerBase
 {
-    private readonly GeoHuntContext _context;
+    private readonly IGameService _gameService;
 
-    public GameController(GeoHuntContext context)
+    public GameController(IGameService gameService)
     {
-        _context = context;
+        _gameService = gameService;
     }
 
     [HttpPost]
-    public async Task<ActionResult> StartGame([FromBody] CreateGameDto dto)
+    public async Task<ActionResult<GameResponseDto>> StartGame([FromBody] Game game)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var user = await _context.Users.FindAsync(dto.UserId);
-        if (user == null)
-        {
-            return NotFound("User not found");
-        }
-
-        var game = new Game
-        {
-            Id = Guid.NewGuid(),
-            UserId = dto.UserId,
-            User = user,
-            TotalScore = 0,
-            StartedAt = DateTime.UtcNow,
-            FinishedAt = null,
-            TotalRounds = dto.TotalRounds <= 0 ? 3 : dto.TotalRounds,
-            CurrentRound = 1
-        };
-
-        _context.Games.Add(game);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(StartGame), new { id = game.Id }, new GameResponseDto
-        {
-            Id = game.Id,
-            UserId = game.UserId,
-            TotalScore = game.TotalScore,
-            StartedAt = game.StartedAt,
-            FinishedAt = game.FinishedAt,
-            CurrentRound = game.CurrentRound,
-            TotalRounds = game.TotalRounds
-        });
-
+        var gameDto = await _gameService.StartGameAsync(game);
+        return CreatedAtAction(nameof(GetGameById), new { id = gameDto.Id }, gameDto);
     }
 
     [HttpPatch("{id}/finish")]
     public async Task<ActionResult<Game>> FinishGame(Guid id)
     {
-        var game = await _context.Games.FindAsync(id);
-        if (game == null)
+        try
+        {
+            var game = await _gameService.FinishGameAsync(id);
+            return Ok(game);
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound("Game not found");
         }
-
-        if (game.FinishedAt != null)
+        catch (InvalidOperationException ex)
         {
-            return BadRequest("Game is already finished");
+            return BadRequest(ex.Message);
         }
-
-        game.FinishedAt = DateTime.UtcNow;
-        _context.Games.Update(game);
-        await _context.SaveChangesAsync();
-
-        return Ok(game);
     }
 
     [HttpPatch("{id}/score")]
     public async Task<ActionResult<Game>> UpdateScore(Guid id, [FromBody] int score)
     {
-        var game = await _context.Games.FindAsync(id);
-        if (game == null)
+        try
+        {
+            var game = await _gameService.UpdateScoreAsync(id, score);
+            return Ok(game);
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound("Game not found");
         }
-
-        game.TotalScore += score;
-        _context.Games.Update(game);
-        await _context.SaveChangesAsync();
-
-        return Ok(game);
     }
 
     [HttpGet("{id}/total-score")]
     public async Task<ActionResult<int>> GetTotalScore(Guid id)
     {
-        var game = await _context.Games.FindAsync(id);
-        if (game == null)
+        try
+        {
+            var totalScore = await _gameService.GetTotalScoreAsync(id);
+            return Ok(totalScore);
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound("Game not found");
         }
-        return Ok(game.TotalScore);
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<GameResponseDto>> GetGameById(Guid id)
     {
-        var game = await _context.Games.FindAsync(id);
-        if (game == null)
-        {
+        var gameDto = await _gameService.GetGameByIdAsync(id);
+        if (gameDto == null)
             return NotFound("Game not found");
-        }
-
-        var gameDto = new GameResponseDto
-        {
-            Id = game.Id,
-            UserId = game.UserId,
-            TotalScore = game.TotalScore,
-            StartedAt = game.StartedAt,
-            FinishedAt = game.FinishedAt,
-            CurrentRound = game.CurrentRound,
-            TotalRounds = game.TotalRounds
-        };
 
         return Ok(gameDto);
     }

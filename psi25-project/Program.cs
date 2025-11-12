@@ -4,6 +4,8 @@ using psi25_project;
 using psi25_project.Gateways;
 using psi25_project.Services;
 using psi25_project.Services.Interfaces;
+using psi25_project.Repositories;
+using psi25_project.Repositories.Interfaces;
 using psi25_project.Models;
 using psi25_project.Data;
 
@@ -19,6 +21,10 @@ builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IAccountService, AccountService>();
+// GAME controller
+builder.Services.AddScoped<IGameRepository, GameRepository>();
+builder.Services.AddScoped<IGameService, GameService>();
+
 builder.Services.AddScoped<GeocodingService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<UserService>();

@@ -1,0 +1,16 @@
+using psi25_project.Models;
+using psi25_project.Models.Dtos;
+using System;
+using System.Threading.Tasks;
+
+namespace psi25_project.Services.Interfaces
+{
+    public interface IGameService
+    {
+        Task<GameResponseDto> StartGameAsync(Game game);
+        Task<Game> FinishGameAsync(Guid gameId);
+        Task<Game> UpdateScoreAsync(Guid gameId, int score);
+        Task<int> GetTotalScoreAsync(Guid gameId);
+        Task<GameResponseDto?> GetGameByIdAsync(Guid gameId);
+    }
+}
