@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using psi25_project;
 using psi25_project.Gateways;
 using psi25_project.Services;
-using psi25_project.Models; // <-- for ApplicationUser
+using psi25_project.Services.Interfaces;
+using psi25_project.Models;
 using psi25_project.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,12 +15,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient<GoogleMapsGateway>();
 builder.Services.AddControllers();
 
-// Register single unified DbContext (GeoHuntContext)
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Your domain services
-builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<GeocodingService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<UserService>();
