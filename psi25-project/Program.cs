@@ -30,7 +30,8 @@ builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
 builder.Services.AddScoped<IGeocodingService, GeocodingService>();
 
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
-builder.Services.AddScoped<UserService>();
+
+builder.Services.AddScoped<IUserService, UserService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
