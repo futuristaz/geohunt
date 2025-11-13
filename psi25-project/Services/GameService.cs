@@ -2,8 +2,6 @@ using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Services.Interfaces;
-using System;
-using System.Threading.Tasks;
 
 namespace psi25_project.Services
 {
@@ -25,16 +23,19 @@ namespace psi25_project.Services
             return game;
         }
 
-        public async Task<GameResponseDto> StartGameAsync(Game game)
+        public async Task<GameResponseDto> StartGameAsync(CreateGameDto dto)
         {
-            if (game.TotalRounds <= 0)
-                game.TotalRounds = 3;
-
-            game.Id = Guid.NewGuid();
-            game.StartedAt = DateTime.UtcNow;
-            game.FinishedAt = null;
-            game.CurrentRound = 1;
-            game.TotalScore = 0;
+            var game = new Game
+            {
+                Id = Guid.NewGuid(),
+                UserId = dto.UserId,
+                User = null!,
+                StartedAt = DateTime.UtcNow,
+                FinishedAt = null,
+                CurrentRound = 1,
+                TotalRounds = dto.TotalRounds <= 0 ? 3 : dto.TotalRounds,
+                TotalScore = 0
+            };
 
             await _gameRepository.AddAsync(game);
 

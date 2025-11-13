@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Services.Interfaces;
-using System;
-using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -17,9 +15,9 @@ public class GameController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<GameResponseDto>> StartGame([FromBody] Game game)
+    public async Task<ActionResult<GameResponseDto>> StartGame([FromBody] CreateGameDto dto)
     {
-        var gameDto = await _gameService.StartGameAsync(game);
+        var gameDto = await _gameService.StartGameAsync(dto);
         return CreatedAtAction(nameof(GetGameById), new { id = gameDto.Id }, gameDto);
     }
 

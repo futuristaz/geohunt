@@ -7,7 +7,7 @@ namespace psi25_project.Services.Interfaces
 {
     public interface IGameService
     {
-        Task<GameResponseDto> StartGameAsync(Game game);
+        Task<GameResponseDto> StartGameAsync(CreateGameDto dto);
         Task<Game> FinishGameAsync(Guid gameId);
         Task<Game> UpdateScoreAsync(Guid gameId, int score);
         Task<int> GetTotalScoreAsync(Guid gameId);
