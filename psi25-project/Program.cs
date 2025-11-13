@@ -27,6 +27,7 @@ builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IGeocodingService, GeocodingService>();
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();

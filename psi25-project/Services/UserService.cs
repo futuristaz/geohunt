@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
+using psi25_project.Repositories;
 using psi25_project.Services.Interfaces;
 using System.Security.Claims;
 
@@ -11,17 +10,17 @@ namespace psi25_project.Services
     public class UserService : IUserService
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly GeoHuntContext _context;
+        private readonly IUserRepository _userRepository;
 
-        public UserService(UserManager<ApplicationUser> userManager, GeoHuntContext context)
+        public UserService(UserManager<ApplicationUser> userManager, IUserRepository userRepository)
         {
             _userManager = userManager;
-            _context = context;
+            _userRepository = userRepository;
         }
 
         public async Task<List<UserAccountDto>> GetAllUsersAsync()
         {
-            var users = await _userManager.Users.ToListAsync();
+            var users = await _userRepository.GetAllAsync();
             var result = new List<UserAccountDto>();
 
             foreach (var user in users)
@@ -35,7 +34,7 @@ namespace psi25_project.Services
 
         public async Task<UserAccountDto?> GetUserByIdAsync(Guid id)
         {
-            var user = await _userManager.FindByIdAsync(id.ToString());
+            var user = await _userRepository.GetByIdAsync(id);
             if (user == null) return null;
 
             var roles = await _userManager.GetRolesAsync(user);
