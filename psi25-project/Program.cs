@@ -32,6 +32,8 @@ builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
 builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddScoped<IGuessService, GuessService>();
+builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+builder.Services.AddScoped<ILocationService, LocationService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
