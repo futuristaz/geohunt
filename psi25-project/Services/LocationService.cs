@@ -1,6 +1,6 @@
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
-using psi25_project.Repositories;
+using psi25_project.Repositories.Interfaces;
 
 namespace psi25_project.Services
 {

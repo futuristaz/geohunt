@@ -4,31 +4,38 @@ using psi25_project.Repositories.Interfaces;
 using psi25_project.Services.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace psi25_project.Services
 {
     public class GuessService : IGuessService
     {
-        private readonly IGuessRepository _repository;
+        private readonly IGuessRepository _guessRepository;
+        private readonly IGameRepository _gameRepository;
+        private readonly ILocationRepository _locationRepository;
 
-        public GuessService(IGuessRepository repository)
+        public GuessService(
+            IGuessRepository guessRepository,
+            IGameRepository gameRepository,
+            ILocationRepository locationRepository)
         {
-            _repository = repository;
+            _guessRepository = guessRepository;
+            _gameRepository = gameRepository;
+            _locationRepository = locationRepository;
         }
 
-        public async Task<(GuessResponseDto guess, bool finished, int currentRound, int totalScore)> CreateGuessAsync(CreateGuessDto dto)
+        public async Task<(GuessResponseDto guess, bool finished, int currentRound, int totalScore)>
+            CreateGuessAsync(CreateGuessDto dto)
         {
-            var game = await _repository.GetGameByIdAsync(dto.GameId);
-            if (game == null)
-                throw new KeyNotFoundException("Game not found");
+            var game = await _gameRepository.GetByIdAsync(dto.GameId)
+                       ?? throw new KeyNotFoundException("Game not found");
 
             if (game.FinishedAt != null)
                 throw new InvalidOperationException("Game is already finished");
 
-            var location = await _repository.GetLocationByIdAsync(dto.LocationId);
-            if (location == null)
-                throw new KeyNotFoundException("Location not found");
+            var location = await _locationRepository.GetByIdAsync(dto.LocationId)
+                           ?? throw new KeyNotFoundException("Location not found");
 
             var roundNumber = game.CurrentRound;
 
@@ -46,59 +53,48 @@ namespace psi25_project.Services
                 Score = dto.Score
             };
 
-            await _repository.AddGuessAsync(guess);
+            await _guessRepository.AddAsync(guess);
 
-            // Update game
-            game.TotalScore += dto.Score;
+            UpdateGameProgress(game, dto.Score);
 
-            var isLastRound = roundNumber >= game.TotalRounds;
-            if (isLastRound)
-                game.FinishedAt = DateTime.UtcNow;
-            else
-                game.CurrentRound = roundNumber + 1;
+            await _gameRepository.UpdateAsync(game);
 
-            await _repository.SaveGameAsync(game);
+            var response = MapToDto(guess, location);
 
-            var guessDto = new GuessResponseDto
-            {
-                Id = guess.Id,
-                GameId = guess.GameId,
-                LocationId = guess.LocationId,
-                RoundNumber = guess.RoundNumber,
-                GuessedLatitude = guess.GuessedLatitude,
-                GuessedLongitude = guess.GuessedLongitude,
-                DistanceKm = guess.DistanceKm,
-                Score = guess.Score,
-                ActualLatitude = location.Latitude,
-                ActualLongitude = location.Longitude
-            };
-
-            return (guessDto, isLastRound, game.CurrentRound, game.TotalScore);
+            return (response, game.FinishedAt != null, game.CurrentRound, game.TotalScore);
         }
 
         public async Task<List<GuessResponseDto>> GetGuessesForGameAsync(Guid gameId)
         {
-            var guesses = await _repository.GetGuessesForGameAsync(gameId);
-            var result = new List<GuessResponseDto>();
+            var guesses = await _guessRepository.GetGuessesByGameAsync(gameId);
+            return guesses.Select(g => MapToDto(g, g.Location)).ToList();
+        }
 
-            foreach (var g in guesses)
+        private static GuessResponseDto MapToDto(Guess g, Location location)
+        {
+            return new GuessResponseDto
             {
-                result.Add(new GuessResponseDto
-                {
-                    Id = g.Id,
-                    GameId = g.GameId,
-                    LocationId = g.LocationId,
-                    RoundNumber = g.RoundNumber,
-                    GuessedLatitude = g.GuessedLatitude,
-                    GuessedLongitude = g.GuessedLongitude,
-                    DistanceKm = g.DistanceKm,
-                    Score = g.Score,
-                    ActualLatitude = g.Location.Latitude,
-                    ActualLongitude = g.Location.Longitude
-                });
-            }
+                Id = g.Id,
+                GameId = g.GameId,
+                LocationId = g.LocationId,
+                RoundNumber = g.RoundNumber,
+                GuessedLatitude = g.GuessedLatitude,
+                GuessedLongitude = g.GuessedLongitude,
+                DistanceKm = g.DistanceKm,
+                Score = g.Score,
+                ActualLatitude = location.Latitude,
+                ActualLongitude = location.Longitude
+            };
+        }
 
-            return result;
+        private static void UpdateGameProgress(Game game, int score)
+        {
+            game.TotalScore += score;
+
+            if (game.CurrentRound >= game.TotalRounds)
+                game.FinishedAt = DateTime.UtcNow;
+            else
+                game.CurrentRound++;
         }
     }
 }

@@ -1,6 +1,6 @@
 using psi25_project.Models;
 
-namespace psi25_project.Repositories
+namespace psi25_project.Repositories.Interfaces
 {
     public interface ILocationRepository
     {
