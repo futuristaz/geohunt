@@ -1,15 +1,17 @@
+using System;
 using System.Threading.Tasks;
-using psi25_project.Gateways;
+using psi25_project.Gateways.Interfaces;
 using psi25_project.Models.Dtos;
+using psi25_project.Services.Interfaces;
 
 namespace psi25_project.Services
 {
-    public class GeocodingService
+    public class GeocodingService : IGeocodingService
     {
-        private readonly GoogleMapsGateway _mapsGateway;
-        private const int MaxTriesPerCity = 1000; // Hard limit for coordinate modification per city
+        private readonly IGoogleMapsGateway _mapsGateway;
+        private const int MaxTriesPerCity = 1000;
 
-        public GeocodingService(GoogleMapsGateway mapsGateway)
+        public GeocodingService(IGoogleMapsGateway mapsGateway)
         {
             _mapsGateway = mapsGateway;
         }

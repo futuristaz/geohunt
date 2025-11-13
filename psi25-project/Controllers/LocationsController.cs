@@ -1,92 +1,50 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
-using Location = psi25_project.Models.Location;
-using psi25_project.Data;
+using psi25_project.Services;
 
 [ApiController]
 [Route("api/[controller]")]
 public class LocationsController : ControllerBase
 {
-    private readonly GeoHuntContext _context;
+    private readonly ILocationService _locationService;
 
-    public LocationsController(GeoHuntContext context)
+    public LocationsController(ILocationService locationService)
     {
-        _context = context;
+        _locationService = locationService;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Location>>> GetLocations()
     {
-        return await _context.Locations.ToListAsync();
+        var locations = await _locationService.GetAllLocationsAsync();
+        return Ok(locations);
     }
 
     [HttpGet("recent")]
     public async Task<ActionResult> GetRecentLocations()
     {
-        var cutoffUtc = DateTime.UtcNow.AddMonths(-6);
-
-        var result = await _context.Locations
-    .AsNoTracking()
-    .Where(l => l.LastPlayedAt > cutoffUtc)
-    .OrderByDescending(l => l.LastPlayedAt)
-    .Take(20)
-    .Select(l => new
-    {
-        l.Id,
-        l.Latitude,
-        l.Longitude,
-        l.panoId,
-        l.LastPlayedAt,
-    })
-    .ToListAsync();
-
-        return Ok(result);
+        var locations = await _locationService.GetRecentLocationsAsync();
+        return Ok(locations);
     }
 
     [HttpPost]
     public async Task<ActionResult<Location>> CreateLocation([FromBody] LocationDto dto)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
-        var location = new Location
-        {
-            Latitude = dto.Latitude,
-            Longitude = dto.Longitude,
-            panoId = dto.panoId,
-            CreatedAt = DateTime.UtcNow,
-            LastPlayedAt = DateTime.UtcNow,
-            Guesses = new List<Guess>()
-        };
-
-        _context.Locations.Add(location);
-        await _context.SaveChangesAsync();
-
+        var location = await _locationService.CreateLocationAsync(dto);
         return CreatedAtAction(nameof(GetLocations), new { id = location.Id }, location);
     }
 
     [HttpPatch("{id}/last-played")]
     public async Task<IActionResult> UpdateLastPlayed(int id)
     {
-        var location = await _context.Locations.FindAsync(id);
-        if (location == null)
-        {
-            return NotFound("Location not found");
-        }
+        var updated = await _locationService.UpdateLastPlayedAsync(id);
+        if (!updated.success)
+            return NotFound(updated.message);
 
-        location.LastPlayedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        return Ok(new
-        {
-            message = "LastPlayedAt updated successfully",
-            location.Id,
-            location.LastPlayedAt
-        });
+        return Ok(updated.result);
     }
-
 }

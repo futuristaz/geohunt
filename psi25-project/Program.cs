@@ -2,8 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using psi25_project;
 using psi25_project.Gateways;
+using psi25_project.Gateways.Interfaces;
 using psi25_project.Services;
-using psi25_project.Models; // <-- for ApplicationUser
+using psi25_project.Services.Interfaces;
+using psi25_project.Repositories;
+using psi25_project.Repositories.Interfaces;
+using psi25_project.Models;
 using psi25_project.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,15 +18,23 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient<GoogleMapsGateway>();
 builder.Services.AddControllers();
 
-// Register single unified DbContext (GeoHuntContext)
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Your domain services
-builder.Services.AddScoped<AccountService>();
-builder.Services.AddScoped<GeocodingService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IGameRepository, GameRepository>();
+builder.Services.AddScoped<IGameService, GameService>();
+builder.Services.AddScoped<IGeocodingService, GeocodingService>();
+builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
-builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IResultService, ResultService>();
+builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
+builder.Services.AddScoped<IGuessRepository, GuessRepository>();
+builder.Services.AddScoped<IGuessService, GuessService>();
+builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+builder.Services.AddScoped<ILocationService, LocationService>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>

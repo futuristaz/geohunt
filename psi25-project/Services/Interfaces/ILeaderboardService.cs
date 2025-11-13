@@ -2,7 +2,7 @@ using psi25_project.Models.Dtos;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace psi25_project.Services
+namespace psi25_project.Services.Interfaces
 {
     public interface ILeaderboardService
     {

@@ -1,20 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using psi25_project.Models.Dtos;
-using psi25_project.Services;
+using psi25_project.Services.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
-    private readonly UserService _userService;
+    private readonly IUserService _userService;
 
-    public UserController(UserService userService)
+    public UserController(IUserService userService)
     {
         _userService = userService;
     }
 
-    // -------------------- Get All Users --------------------
     [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<IActionResult> GetUsers()
@@ -23,7 +24,6 @@ public class UserController : ControllerBase
         return Ok(users);
     }
 
-    // -------------------- Get Current User --------------------
     [HttpGet("me")]
     public async Task<IActionResult> GetCurrentUser()
     {
@@ -32,7 +32,6 @@ public class UserController : ControllerBase
         return Ok(user);
     }
 
-    // -------------------- Get Specific User --------------------
     [Authorize(Roles = "Admin")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUser(Guid id)
@@ -42,7 +41,6 @@ public class UserController : ControllerBase
         return Ok(user);
     }
 
-    // -------------------- Delete User --------------------
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id)

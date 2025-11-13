@@ -1,73 +1,68 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
+using psi25_project.Repositories;
+using psi25_project.Services.Interfaces;
 using System.Security.Claims;
 
 namespace psi25_project.Services
 {
-    public class UserService
+    public class UserService : IUserService
     {
-        private readonly UserManager<ApplicationUser> userManager;
-        private readonly GeoHuntContext context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IUserRepository _userRepository;
 
-        public UserService(UserManager<ApplicationUser> userManager, GeoHuntContext context)
+        public UserService(UserManager<ApplicationUser> userManager, IUserRepository userRepository)
         {
-            this.userManager = userManager;
-            this.context = context;
+            _userManager = userManager;
+            _userRepository = userRepository;
         }
 
-        // -------------------- Get All Users --------------------
         public async Task<List<UserAccountDto>> GetAllUsersAsync()
         {
-            var users = await userManager.Users.ToListAsync();
+            var users = await _userRepository.GetAllAsync();
             var result = new List<UserAccountDto>();
 
             foreach (var user in users)
             {
-                var roles = await userManager.GetRolesAsync(user);
+                var roles = await _userManager.GetRolesAsync(user);
                 result.Add(MapToDto(user, roles));
             }
 
             return result;
         }
 
-        // -------------------- Get Single User by Id --------------------
         public async Task<UserAccountDto?> GetUserByIdAsync(Guid id)
         {
-            var user = await userManager.FindByIdAsync(id.ToString());
+            var user = await _userRepository.GetByIdAsync(id);
             if (user == null) return null;
 
-            var roles = await userManager.GetRolesAsync(user);
+            var roles = await _userManager.GetRolesAsync(user);
             return MapToDto(user, roles);
         }
 
-        // -------------------- Get Current User --------------------
         public async Task<UserAccountDto?> GetCurrentUserAsync(ClaimsPrincipal principal)
         {
             var username = principal.Identity?.Name;
             if (string.IsNullOrEmpty(username)) return null;
 
-            var user = await userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByNameAsync(username);
             if (user == null) return null;
 
-            var roles = await userManager.GetRolesAsync(user);
+            var roles = await _userManager.GetRolesAsync(user);
             return MapToDto(user, roles);
         }
 
-        // -------------------- Delete User --------------------
         public async Task<(bool Succeeded, IEnumerable<IdentityError>? Errors)> DeleteUserAsync(Guid id)
         {
-            var user = await userManager.FindByIdAsync(id.ToString());
+            var user = await _userManager.FindByIdAsync(id.ToString());
             if (user == null)
                 return (false, new[] { new IdentityError { Description = "User not found" } });
 
-            var result = await userManager.DeleteAsync(user);
+            var result = await _userManager.DeleteAsync(user);
             return (result.Succeeded, result.Errors);
         }
 
-        // -------------------- Helper Mapper --------------------
         private static UserAccountDto MapToDto(ApplicationUser user, IEnumerable<string> roles)
         {
             return new UserAccountDto

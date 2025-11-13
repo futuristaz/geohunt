@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using psi25_project.Models.Dtos;
-using psi25_project.Services;
+using psi25_project.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 
 namespace psi25_project.Controllers
@@ -9,9 +9,9 @@ namespace psi25_project.Controllers
     [Route("api/[controller]")]
     public class AccountController : ControllerBase
     {
-        private readonly AccountService _accountService;
+        private readonly IAccountService _accountService;
 
-        public AccountController(AccountService accountService)
+        public AccountController(IAccountService accountService)
         {
             _accountService = accountService;
         }
