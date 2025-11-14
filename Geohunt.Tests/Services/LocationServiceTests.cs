@@ -63,7 +63,7 @@ namespace Geohunt.Tests.Services
             Assert.Equal(dto.Longitude, capturedLocation.Longitude);
             Assert.Equal(dto.panoId, capturedLocation.panoId);
             Assert.NotEqual(default(DateTime), capturedLocation.CreatedAt);
-            Assert.NotEqual(default, capturedLocation.LastPlayedAt);
+            Assert.NotEqual(default(DateTime), capturedLocation.LastPlayedAt);
             _mockRepository.Verify(r => r.AddAsync(It.IsAny<Location>()), Times.Once);
         }
 
