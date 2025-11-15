@@ -179,4 +179,138 @@ public class GameServiceTests
         );
         _mockRepository.Verify(r => r.UpdateAsync(game), Times.Never);
     }
+
+    [Fact]
+    public async Task UpdateScoreAsync_GameExists_UpdatesScore()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var originalScore = 1000;
+        var scoreToAdd = 999;
+        var game = new Game
+        {
+            Id = gameId,
+            User = null!,
+            TotalScore = originalScore
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameId))
+            .ReturnsAsync(game);
+
+        // Act
+        var result = await _service.UpdateScoreAsync(gameId, scoreToAdd);
+
+        // Assert
+        Assert.Equal(originalScore + scoreToAdd, result.TotalScore);
+        _mockRepository.Verify(r => r.UpdateAsync(It.Is<Game>(g => g.TotalScore == 1999)), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTotalScoreAsync_GameExists_ReturnsTotalScore()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var game = new Game
+        {
+            Id = gameId,
+            User = null!,
+            TotalScore = 1000
+        };
+        _mockRepository.Setup(r => r.GetByIdAsync(gameId))
+            .ReturnsAsync(game);
+
+        // Act
+        var result = await _service.GetTotalScoreAsync(gameId);
+        
+        // Assert
+        Assert.Equal(1000, result);
+    }
+[Fact]
+    public async Task GetGameByIdAsync_ExistingGame_ReturnsGameDto()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var startedAt = DateTime.UtcNow;
+        var finishedAt = DateTime.UtcNow.AddHours(1);
+        
+        var game = new Game
+        {
+            Id = gameId,
+            UserId = userId,
+            User = null!,
+            TotalScore = 1500,
+            StartedAt = startedAt,
+            FinishedAt = finishedAt,
+            CurrentRound = 5,
+            TotalRounds = 10
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameId))
+            .ReturnsAsync(game);
+
+        // Act
+        var result = await _service.GetGameByIdAsync(gameId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(gameId, result.Id);
+        Assert.Equal(userId, result.UserId);
+        Assert.Equal(1500, result.TotalScore);
+        Assert.Equal(startedAt, result.StartedAt);
+        Assert.Equal(finishedAt, result.FinishedAt);
+        Assert.Equal(5, result.CurrentRound);
+        Assert.Equal(10, result.TotalRounds);
+        
+        _mockRepository.Verify(r => r.GetByIdAsync(gameId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetGameByIdAsync_NonExistingGame_ReturnsNull()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        
+        _mockRepository.Setup(r => r.GetByIdAsync(gameId))
+            .ReturnsAsync((Game?)null);
+
+        // Act
+        var result = await _service.GetGameByIdAsync(gameId);
+
+        // Assert
+        Assert.Null(result);
+        _mockRepository.Verify(r => r.GetByIdAsync(gameId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetGameByIdAsync_GameWithNullFinishedAt_ReturnsDto()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var game = new Game
+        {
+            Id = gameId,
+            UserId = Guid.NewGuid(),
+            User = null!,
+            TotalScore = 500,
+            StartedAt = DateTime.UtcNow,
+            FinishedAt = null,
+            CurrentRound = 3,
+            TotalRounds = 10
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameId))
+            .ReturnsAsync(game);
+
+        // Act
+        var result = await _service.GetGameByIdAsync(gameId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(gameId, result.Id);
+        Assert.Null(result.FinishedAt);
+        Assert.Equal(3, result.CurrentRound);
+        
+        _mockRepository.Verify(r => r.GetByIdAsync(gameId), Times.Once);
+    }
 }
