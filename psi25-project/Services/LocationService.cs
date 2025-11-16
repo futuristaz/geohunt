@@ -1,12 +1,14 @@
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Repositories.Interfaces;
+using psi25_project.Utils; 
 
 namespace psi25_project.Services
 {
     public class LocationService : ILocationService
     {
         private readonly ILocationRepository _locationRepository;
+        private readonly ObjectValidator<Location> _validator = new ObjectValidator<Location>();
 
         public LocationService(ILocationRepository locationRepository)
         {
@@ -26,15 +28,17 @@ namespace psi25_project.Services
 
         public async Task<Location> CreateLocationAsync(LocationDto dto)
         {
-            var location = new Location
-            {
-                Latitude = dto.Latitude,
-                Longitude = dto.Longitude,
-                panoId = dto.panoId,
-                CreatedAt = DateTime.UtcNow,
-                LastPlayedAt = DateTime.UtcNow,
-                Guesses = new List<Guess>()
-            };
+            var location = _validator.CreateDefault();
+
+            location.Latitude = dto.Latitude;
+            location.Longitude = dto.Longitude;
+            location.panoId = dto.panoId;
+            location.CreatedAt = DateTime.UtcNow;
+            location.LastPlayedAt = DateTime.UtcNow;
+            location.Guesses = new List<Guess>();
+
+            if (!_validator.ValidatePropertyNotNull(location, l => l.panoId))
+                throw new Exception("Location panoId cannot be null!");
 
             await _locationRepository.AddAsync(location);
             return location;
