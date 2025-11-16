@@ -9,6 +9,8 @@ using psi25_project.Repositories;
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Models;
 using psi25_project.Data;
+using psi25_project.Utils;
+using psi25_project.Models.Dtos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +37,8 @@ builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddScoped<IGuessService, GuessService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
+
+builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
