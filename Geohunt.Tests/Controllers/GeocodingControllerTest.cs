@@ -65,6 +65,7 @@ namespace Geohunt.Tests.Controllers
             // Assert
             var badRequest = Assert.IsType<BadRequestObjectResult>(result);
 
+            // Extract anonymous type property using reflection
             var errorProp = badRequest.Value.GetType().GetProperty("error");
             Assert.NotNull(errorProp);
 

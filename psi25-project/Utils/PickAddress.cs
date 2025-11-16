@@ -1,4 +1,4 @@
-namespace psi25_project
+namespace psi25_project.Utils
 {
     public static class AddressProvider
     {
