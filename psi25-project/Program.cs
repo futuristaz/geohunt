@@ -9,13 +9,30 @@ using psi25_project.Repositories;
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Models;
 using psi25_project.Data;
+using psi25_project.Middleware;
+using Serilog;
+using Polly;
+using Polly.Extensions.Http;
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: "logs/geohunt-.log",
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+        retainedFileCountLimit: 30)
+    .Enrich.FromLogContext()
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Use Serilog for logging
+builder.Host.UseSerilog();
 
 // ---------------- Services ----------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHttpClient<GoogleMapsGateway>();
 builder.Services.AddControllers();
 
 builder.Services.AddDbContext<GeoHuntContext>(options =>
@@ -30,11 +47,15 @@ builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>();
-builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
 builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddScoped<IGuessService, GuessService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
+
+// ---------------- HTTP Client with Polly Resilience ----------------
+builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
+    .AddPolicyHandler(GetRetryPolicy())
+    .AddPolicyHandler(GetCircuitBreakerPolicy());
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -111,7 +132,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Use global exception handler middleware (should be first to catch all exceptions)
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
 // app.UseHttpsRedirection();
+
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -129,5 +154,51 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapFallbackToFile("/index.html"); // SPA routing in prod
 
+try
+{
+    Log.Information("Starting GeoHunt application");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
-app.Run();
+// Polly retry policy: retry on 5xx and network errors, but not on 4xx (client errors)
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError() // 5xx and 408
+        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests) // 429
+        .WaitAndRetryAsync(
+            retryCount: 3,
+            sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), // Exponential backoff
+            onRetry: (outcome, timespan, retryCount, context) =>
+            {
+                Log.Warning("Google Maps API call failed. Retry {RetryCount} after {Delay}s. Status: {StatusCode}",
+                    retryCount, timespan.TotalSeconds, outcome.Result?.StatusCode);
+            });
+}
+
+// Circuit breaker: open circuit after 5 consecutive failures, stay open for 30 seconds
+static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests) // 429 - consistent with retry policy
+        .CircuitBreakerAsync(
+            handledEventsAllowedBeforeBreaking: 5,
+            durationOfBreak: TimeSpan.FromSeconds(30),
+            onBreak: (outcome, duration) =>
+            {
+                Log.Error("Google Maps API circuit breaker opened for {Duration}s due to consecutive failures", duration.TotalSeconds);
+            },
+            onReset: () =>
+            {
+                Log.Information("Google Maps API circuit breaker reset - resuming normal operations");
+            });
+}
