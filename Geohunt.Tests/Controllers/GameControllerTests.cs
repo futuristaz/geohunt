@@ -218,4 +218,24 @@ public class GameControllerTests
         Assert.Equal(gameId, returnedDto.Id);
         _mockService.Verify(s => s.GetGameByIdAsync(gameId), Times.Once);
     }
+
+    [Fact]
+    public async Task GetGameById_GameDoesntExist_ReturnsNotFound()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        
+        _mockService.Setup(s => s.GetGameByIdAsync(gameId))
+            .ReturnsAsync((GameResponseDto?)null);
+
+        // Act
+        var result = await _controller.GetGameById(gameId);
+
+        // Assert
+        var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+        Assert.Equal(404, notFoundResult.StatusCode);
+        Assert.Equal("Game not found", notFoundResult.Value);
+
+        _mockService.Verify(s => s.GetGameByIdAsync(gameId), Times.Once);
+    }
 }
