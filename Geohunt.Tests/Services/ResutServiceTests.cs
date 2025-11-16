@@ -32,19 +32,19 @@ public class ResultServiceTests
     }
 
     [Fact]
-public void CalculateResult_ZeroDistance_ReturnsFullScore()
-{
-    var service = new ResultService();
-
-    var dto = new DistanceDto
+    public void CalculateResult_ZeroDistance_ReturnsFullScore()
     {
-        initialCoords = new() { Lat = 50, Lng = 10 },
-        guessedCoords = new() { Lat = 50, Lng = 10 }
-    };
+        var service = new ResultService();
 
-    var (distance, score) = service.CalculateResult(dto);
+        var dto = new DistanceDto
+        {
+            initialCoords = new() { Lat = 50, Lng = 10 },
+            guessedCoords = new() { Lat = 50, Lng = 10 }
+        };
 
-    Assert.Equal(0, distance);
-    Assert.True(score > 0);
-}
+        var (distance, score) = service.CalculateResult(dto);
+
+        Assert.Equal(0, distance);
+        Assert.True(score > 0);
+    }
 }

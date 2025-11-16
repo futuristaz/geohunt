@@ -2,52 +2,58 @@ using Moq;
 using psi25_project.Models.Dtos;
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Services;
+using Xunit;
 
 namespace Geohunt.Tests.Services;
 
 public class LeaderboardServiceTest
 {
-    [Fact]
-    public async Task GetTopPlayersAsync_ReturnRepositoryData()
+    private readonly Mock<ILeaderboardRepository> _mockRepo;
+    private readonly LeaderboardService _service;
+
+    public LeaderboardServiceTest()
     {
-        var mockRepo = new Mock<ILeaderboardRepository>();
-
-        var expectedList = new List<LeaderboardEntry>
-        {
-            new LeaderboardEntry { Username = "Joe", TotalScore = 1000},
-            new LeaderboardEntry { Username = "Doe", TotalScore = 3000}
-        };
-
-        mockRepo.Setup(r => r.GetTopPlayersAsync(20))
-                .ReturnsAsync(expectedList);
-        
-        var service = new LeaderboardService(mockRepo.Object);
-
-        var result = await service.GetTopPlayersAsync();
-
-        Assert.Equal(expectedList, result);
-        mockRepo.Verify(r => r.GetTopPlayersAsync(20), Times.Once);
-
+        _mockRepo = new Mock<ILeaderboardRepository>();
+        _service = new LeaderboardService(_mockRepo.Object);
     }
 
     [Fact]
-    public async Task GetTopLeaderboardAsync_ReturnsRepositoryData()
+    public async Task GetTopLeaderboardAsync_ReturnsExpectedResults()
     {
-        var mockRepo = new Mock<ILeaderboardRepository>();
-
-        var expected = new List<LeaderboardEntry>
+        var fakeLeaderboard = new List<LeaderboardEntry>
         {
-            new LeaderboardEntry { Username = "Test", DistanceKm = 15 }
+            new LeaderboardEntry { Id = 1, Username = "Joe", TotalScore = 100 },
+            new LeaderboardEntry { Id = 2, Username = "Doe", TotalScore = 80 }
+        };
+        
+        _mockRepo.Setup(r => r.GetTopGuessesAsync(2))
+                 .ReturnsAsync(fakeLeaderboard);
+
+        var result = await _service.GetTopLeaderboardAsync(2);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Joe", result[0].Username);
+        Assert.Equal(100, result[0].TotalScore);
+
+         _mockRepo.Verify(r => r.GetTopGuessesAsync(2), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTopPlayersAsync_ReturnExpectedResults()
+    {
+        var fakePlayers = new List<LeaderboardEntry>
+        {
+            new LeaderboardEntry { Id = 1, Username = "Joe", TotalScore = 150 },
         };
 
-        mockRepo.Setup(r => r.GetTopGuessesAsync(10))
-                .ReturnsAsync(expected);
+        _mockRepo.Setup(r => r.GetTopPlayersAsync(1))
+                 .ReturnsAsync(fakePlayers);
 
-        var service = new LeaderboardService(mockRepo.Object);
+        var result = await _service.GetTopPlayersAsync(1);
 
-        var result = await service.GetTopLeaderboardAsync(10);
+        Assert.Single(result);
+        Assert.Equal("Joe", result[0].Username);
 
-        Assert.Equal(expected, result);
-        mockRepo.Verify(r => r.GetTopGuessesAsync(10), Times.Once);
+        _mockRepo.Verify(r => r.GetTopPlayersAsync(1), Times.Once);
     }
 }
