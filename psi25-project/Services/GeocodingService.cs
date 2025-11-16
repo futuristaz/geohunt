@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using psi25_project.Gateways.Interfaces;
 using psi25_project.Models.Dtos;
@@ -11,10 +13,19 @@ namespace psi25_project.Services
         private readonly IGoogleMapsGateway _mapsGateway;
         private const int MaxTriesPerCity = 1000;
 
+        private static readonly ConcurrentDictionary<string, Lazy<Task<GeocodeResultDto>>> _geocodeCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
         public GeocodingService(IGoogleMapsGateway mapsGateway)
         {
             _mapsGateway = mapsGateway;
         }
+
+        private Task<GeocodeResultDto> GetGeocodeAsync(string address) =>
+            _geocodeCache.GetOrAdd(address,
+                key => new Lazy<Task<GeocodeResultDto>>(
+                    () => _mapsGateway.GetCoordinatesAsync(key),
+                    LazyThreadSafetyMode.ExecutionAndPublication)).Value;
 
         public async Task<(bool success, object result)> GetValidCoordinatesAsync()
         {
@@ -22,7 +33,16 @@ namespace psi25_project.Services
             {
                 string address = AddressProvider.GetRandomAddress();
 
-                GeocodeResultDto coords = await _mapsGateway.GetCoordinatesAsync(address);
+                GeocodeResultDto coords;
+                try
+                {
+                    coords = await GetGeocodeAsync(address);
+                }
+                catch
+                {
+                    _geocodeCache.TryRemove(address, out _);
+                    throw;
+                }
 
                 double lat = coords.Lat;
                 double lng = coords.Lng;

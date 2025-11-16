@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -16,6 +18,8 @@ namespace psi25_project.Gateways
         private readonly string _apiKey;
         private readonly HttpClient _httpClient;
         private readonly ILogger<GoogleMapsGateway> _logger;
+
+        private static readonly ConcurrentDictionary<(double lat, double lng), Lazy<Task<StreetViewLocationDto?>>> _streetViewCache = new();
 
         public GoogleMapsGateway(HttpClient httpClient, IConfiguration configuration, ILogger<GoogleMapsGateway> logger)
         {
@@ -120,7 +124,26 @@ namespace psi25_project.Gateways
             }
         }
 
+        private Task<StreetViewLocationDto?> GetStreetViewAsync(double lat, double lng) =>
+            _streetViewCache.GetOrAdd((lat, lng),
+                key => new Lazy<Task<StreetViewLocationDto?>>(
+                    () => GetStreetViewMetadataAsyncInternal(key.lat, key.lng),
+                    LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+
         public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng)
+        {
+            try
+            {
+                return await GetStreetViewAsync(lat, lng);
+            }
+            catch
+            {
+                _streetViewCache.TryRemove((lat, lng), out _);
+                throw;
+            }
+        }
+
+        private async Task<StreetViewLocationDto?> GetStreetViewMetadataAsyncInternal(double lat, double lng)
         {
             string endpoint = "Street View Metadata API";
             string url = $"https://maps.googleapis.com/maps/api/streetview/metadata?location={lat},{lng}&key={_apiKey}";
