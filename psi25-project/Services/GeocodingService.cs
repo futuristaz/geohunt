@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using psi25_project.Gateways.Interfaces;
@@ -11,6 +13,7 @@ namespace psi25_project.Services
     {
         private readonly IGoogleMapsGateway _mapsGateway;
         private readonly IMemoryCache _cache;
+        private static readonly ConcurrentDictionary<string, Lazy<Task<GeocodeResultDto>>> _inFlightGeocodingRequests = new();
         private const int MaxTriesPerCity = 1000;
 
         public GeocodingService(IGoogleMapsGateway mapsGateway, IMemoryCache cache)
@@ -19,21 +22,48 @@ namespace psi25_project.Services
             _cache = cache;
         }
 
+        private static string NormalizeAddressKey(string address) => address.ToLowerInvariant();
+
         public async Task<(bool success, object result)> GetValidCoordinatesAsync()
         {
             while (true)
             {
                 string address = AddressProvider.GetRandomAddress();
 
-                // Use case-insensitive cache key to preserve original behavior
-                var cacheKey = address.ToLowerInvariant();
+                // Use normalized cache key for both cache and in-flight tracking
+                var cacheKey = NormalizeAddressKey(address);
 
-                var coords = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+                GeocodeResultDto coords;
+
+                // Check cache first
+                if (!_cache.TryGetValue(cacheKey, out coords))
                 {
-                    entry.SetAbsoluteExpiration(TimeSpan.FromHours(1));
-                    entry.SetSize(1);
-                    return await _mapsGateway.GetCoordinatesAsync(address);
-                });
+                    // Deduplicate in-flight requests using Lazy<Task<T>>
+                    var lazyTask = _inFlightGeocodingRequests.GetOrAdd(
+                        cacheKey,
+                        key => new Lazy<Task<GeocodeResultDto>>(
+                            async () => await _mapsGateway.GetCoordinatesAsync(address),
+                            LazyThreadSafetyMode.ExecutionAndPublication
+                        )
+                    );
+
+                    try
+                    {
+                        coords = await lazyTask.Value;
+
+                        // Store in cache
+                        _cache.Set(cacheKey, coords, new MemoryCacheEntryOptions
+                        {
+                            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
+                            Size = 1
+                        });
+                    }
+                    finally
+                    {
+                        // Always remove from in-flight tracking
+                        _inFlightGeocodingRequests.TryRemove(cacheKey, out _);
+                    }
+                }
 
                 if (coords == null)
                 {

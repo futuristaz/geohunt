@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +19,7 @@ namespace psi25_project.Gateways
         private readonly HttpClient _httpClient;
         private readonly ILogger<GoogleMapsGateway> _logger;
         private readonly IMemoryCache _cache;
+        private static readonly ConcurrentDictionary<string, Lazy<Task<StreetViewLocationDto?>>> _inFlightStreetViewRequests = new();
 
         public GoogleMapsGateway(HttpClient httpClient, IConfiguration configuration, ILogger<GoogleMapsGateway> logger, IMemoryCache cache)
         {
@@ -29,6 +32,8 @@ namespace psi25_project.Gateways
                           errorCode: "MISSING_API_KEY",
                           message: "Google Maps API key not found in configuration. Please set GoogleMaps:ApiKey.");
         }
+
+        private static string NormalizeCoordKey(double lat, double lng) => $"{lat:F6},{lng:F6}";
 
         public async Task<GeocodeResultDto> GetCoordinatesAsync(string address)
         {
@@ -124,15 +129,40 @@ namespace psi25_project.Gateways
 
         public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng)
         {
-            // Use string cache key to avoid floating-point precision issues
-            var cacheKey = $"{lat:F6},{lng:F6}";
+            // Use normalized cache key for both cache and in-flight tracking
+            var cacheKey = NormalizeCoordKey(lat, lng);
 
-            var result = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+            StreetViewLocationDto? result;
+
+            // Check cache first
+            if (!_cache.TryGetValue(cacheKey, out result))
             {
-                entry.SetAbsoluteExpiration(TimeSpan.FromHours(1));
-                entry.SetSize(1);
-                return await GetStreetViewMetadataAsyncInternal(lat, lng);
-            });
+                // Deduplicate in-flight requests using Lazy<Task<T>>
+                var lazyTask = _inFlightStreetViewRequests.GetOrAdd(
+                    cacheKey,
+                    key => new Lazy<Task<StreetViewLocationDto?>>(
+                        async () => await GetStreetViewMetadataAsyncInternal(lat, lng),
+                        LazyThreadSafetyMode.ExecutionAndPublication
+                    )
+                );
+
+                try
+                {
+                    result = await lazyTask.Value;
+
+                    // Store in cache (even if null - that's a valid result)
+                    _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
+                        Size = 1
+                    });
+                }
+                finally
+                {
+                    // Always remove from in-flight tracking
+                    _inFlightStreetViewRequests.TryRemove(cacheKey, out _);
+                }
+            }
 
             return result;
         }
