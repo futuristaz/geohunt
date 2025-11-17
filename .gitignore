@@ -33,6 +33,7 @@ TestResult*/
 *.trx
 *.coverage
 *.coveragexml
+coverage-report*/
 
 # Azure Functions local settings
 local.settings.json
