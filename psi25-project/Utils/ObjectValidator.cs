@@ -9,7 +9,7 @@ namespace psi25_project.Utils
         {
             return new T();
         }
-        public bool ValidatePropertyNotNull(T obj, Expression<Func<T, object?>> selector)
+        public bool ValidatePropertyNotNull<TProperty>(T obj, Expression<Func<T, TProperty>> selector)
         {
             var compiled = selector.Compile();
             return compiled(obj) != null;
