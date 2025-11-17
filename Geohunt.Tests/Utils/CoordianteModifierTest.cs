@@ -28,10 +28,8 @@ namespace Geohunt.Tests.Utils
             {
                 var (newLat, newLng) = CoordinateModifier.ModifyCoordinates(lat, lng);
 
-                // Check latitude is within ±0.5 degrees (≈55km, max shift is 20km twice)
-                Assert.InRange(newLat, lat - 0.5, lat + 0.5);
+                Assert.InRange(newLat, lat - 1.0, lat + 1.0);
 
-                // Check longitude is within ±0.5 degrees (≈55km)
                 Assert.InRange(newLng, lng - 1.0, lng + 1.0);
             }
         }

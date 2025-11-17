@@ -6,7 +6,7 @@ declare global {
 }
 
 import { useEffect, useRef, useState } from 'react';
-import MiniMap from '../components/Minimap';
+import MiniMap from '../components/MiniMap';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface Coordinates {

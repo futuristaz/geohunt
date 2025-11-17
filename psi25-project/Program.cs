@@ -131,3 +131,7 @@ app.MapFallbackToFile("/index.html"); // SPA routing in prod
 
 
 app.Run();
+
+// Make the implicit Program class public for testing
+public partial class Program { }
+
