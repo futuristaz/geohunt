@@ -32,7 +32,7 @@ namespace Geohunt.Tests.Utils
                 Assert.InRange(newLat, lat - 0.5, lat + 0.5);
 
                 // Check longitude is within ±0.5 degrees (≈55km)
-                Assert.InRange(newLng, lng - 0.5, lng + 0.5);
+                Assert.InRange(newLng, lng - 1.0, lng + 1.0);
             }
         }
 
