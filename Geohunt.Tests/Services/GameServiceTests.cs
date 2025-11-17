@@ -33,7 +33,7 @@ public class GameServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = _service.StartGameAsync(gameDto);
+        var result = await _service.StartGameAsync(gameDto);
 
         // Assert
         Assert.NotNull(capturedGame);
@@ -63,7 +63,7 @@ public class GameServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = _service.StartGameAsync(gameDto);
+        var result = await _service.StartGameAsync(gameDto);
 
         // Assert
         Assert.NotNull(capturedGame);
@@ -93,7 +93,7 @@ public class GameServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = _service.StartGameAsync(gameDto);
+        var result = await _service.StartGameAsync(gameDto);
 
         // Assert
         Assert.NotNull(capturedGame);
