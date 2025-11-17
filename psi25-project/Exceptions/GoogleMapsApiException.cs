@@ -24,8 +24,9 @@ namespace psi25_project.Exceptions
         public GoogleMapsApiException(
             string endpoint,
             string errorCode,
-            string message)
-            : base(message)
+            string message,
+            Exception? innerException = null)
+            : base(message, innerException)
         {
             Endpoint = endpoint;
             StatusCode = null;

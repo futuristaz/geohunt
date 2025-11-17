@@ -65,11 +65,22 @@ const StreetViewApp = () => {
   // ---- utility: handle API errors consistently ----
   const handleApiError = async (response: Response, context: string) => {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const contentType = response.headers.get('Content-Type') || '';
+      let errorData: any = {};
+
+      if (contentType.includes('application/json')) {
+        errorData = await response.json().catch(() => ({}));
+      } else {
+        // Try to get text for non-JSON responses
+        errorData.message = await response.text().catch(() => '');
+      }
+
       if (errorData.code === 'MAPS_UNAVAILABLE') {
         throw new Error(`Couldn't ${context}. The map service is temporarily unavailable. Please retry in a moment.`);
       }
-      throw new Error(`${context} failed: ${response.status}`);
+
+      const extraMsg = errorData.message ? `: ${errorData.message}` : '';
+      throw new Error(`${context} failed: ${response.status}${extraMsg}`);
     }
   };
 
