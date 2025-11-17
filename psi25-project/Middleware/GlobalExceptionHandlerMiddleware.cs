@@ -39,6 +39,12 @@ namespace psi25_project.Middleware
                 exception.ErrorCode,
                 exception.StatusCode);
 
+            if (context.Response.HasStarted)
+            {
+                _logger.LogWarning("Response already started; skipping error write. Path: {Path}", context.Request.Path);
+                return;
+            }
+
             context.Response.ContentType = "application/json";
 
             // Map error codes to appropriate HTTP status codes
@@ -71,6 +77,12 @@ namespace psi25_project.Middleware
         private async Task HandleGenericExceptionAsync(HttpContext context, Exception exception)
         {
             _logger.LogError(exception, "An unhandled exception occurred");
+
+            if (context.Response.HasStarted)
+            {
+                _logger.LogWarning("Response already started; skipping error write. Path: {Path}", context.Request.Path);
+                return;
+            }
 
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;

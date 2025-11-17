@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Concurrent;
-using System.Net;
 using System.Net.Http;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using psi25_project.Exceptions;
@@ -18,13 +16,13 @@ namespace psi25_project.Gateways
         private readonly string _apiKey;
         private readonly HttpClient _httpClient;
         private readonly ILogger<GoogleMapsGateway> _logger;
+        private readonly IMemoryCache _cache;
 
-        private static readonly ConcurrentDictionary<(double lat, double lng), Lazy<Task<StreetViewLocationDto?>>> _streetViewCache = new();
-
-        public GoogleMapsGateway(HttpClient httpClient, IConfiguration configuration, ILogger<GoogleMapsGateway> logger)
+        public GoogleMapsGateway(HttpClient httpClient, IConfiguration configuration, ILogger<GoogleMapsGateway> logger, IMemoryCache cache)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _cache = cache;
             _apiKey = configuration["GoogleMaps:ApiKey"]
                       ?? throw new GoogleMapsApiException(
                           endpoint: "Configuration",
@@ -124,23 +122,19 @@ namespace psi25_project.Gateways
             }
         }
 
-        private Task<StreetViewLocationDto?> GetStreetViewAsync(double lat, double lng) =>
-            _streetViewCache.GetOrAdd((lat, lng),
-                key => new Lazy<Task<StreetViewLocationDto?>>(
-                    () => GetStreetViewMetadataAsyncInternal(key.lat, key.lng),
-                    LazyThreadSafetyMode.ExecutionAndPublication)).Value;
-
         public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng)
         {
-            try
+            // Use string cache key to avoid floating-point precision issues
+            var cacheKey = $"{lat:F6},{lng:F6}";
+
+            var result = await _cache.GetOrCreateAsync(cacheKey, async entry =>
             {
-                return await GetStreetViewAsync(lat, lng);
-            }
-            catch
-            {
-                _streetViewCache.TryRemove((lat, lng), out _);
-                throw;
-            }
+                entry.SetAbsoluteExpiration(TimeSpan.FromHours(1));
+                entry.SetSize(1);
+                return await GetStreetViewMetadataAsyncInternal(lat, lng);
+            });
+
+            return result;
         }
 
         private async Task<StreetViewLocationDto?> GetStreetViewMetadataAsyncInternal(double lat, double lng)

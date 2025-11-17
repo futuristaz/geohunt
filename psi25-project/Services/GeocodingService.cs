@@ -1,7 +1,6 @@
 using System;
-using System.Collections.Concurrent;
-using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using psi25_project.Gateways.Interfaces;
 using psi25_project.Models.Dtos;
 using psi25_project.Services.Interfaces;
@@ -11,21 +10,14 @@ namespace psi25_project.Services
     public class GeocodingService : IGeocodingService
     {
         private readonly IGoogleMapsGateway _mapsGateway;
+        private readonly IMemoryCache _cache;
         private const int MaxTriesPerCity = 1000;
 
-        private static readonly ConcurrentDictionary<string, Lazy<Task<GeocodeResultDto>>> _geocodeCache =
-            new(StringComparer.OrdinalIgnoreCase);
-
-        public GeocodingService(IGoogleMapsGateway mapsGateway)
+        public GeocodingService(IGoogleMapsGateway mapsGateway, IMemoryCache cache)
         {
             _mapsGateway = mapsGateway;
+            _cache = cache;
         }
-
-        private Task<GeocodeResultDto> GetGeocodeAsync(string address) =>
-            _geocodeCache.GetOrAdd(address,
-                key => new Lazy<Task<GeocodeResultDto>>(
-                    () => _mapsGateway.GetCoordinatesAsync(key),
-                    LazyThreadSafetyMode.ExecutionAndPublication)).Value;
 
         public async Task<(bool success, object result)> GetValidCoordinatesAsync()
         {
@@ -33,15 +25,19 @@ namespace psi25_project.Services
             {
                 string address = AddressProvider.GetRandomAddress();
 
-                GeocodeResultDto coords;
-                try
+                // Use case-insensitive cache key to preserve original behavior
+                var cacheKey = address.ToLowerInvariant();
+
+                var coords = await _cache.GetOrCreateAsync(cacheKey, async entry =>
                 {
-                    coords = await GetGeocodeAsync(address);
-                }
-                catch
+                    entry.SetAbsoluteExpiration(TimeSpan.FromHours(1));
+                    entry.SetSize(1);
+                    return await _mapsGateway.GetCoordinatesAsync(address);
+                });
+
+                if (coords == null)
                 {
-                    _geocodeCache.TryRemove(address, out _);
-                    throw;
+                    throw new InvalidOperationException($"Failed to get coordinates for address: {address}");
                 }
 
                 double lat = coords.Lat;

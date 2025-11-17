@@ -35,6 +35,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
+// Register memory cache for caching Google Maps API responses
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 10_000; // Prevents unbounded memory growth
+});
+
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
