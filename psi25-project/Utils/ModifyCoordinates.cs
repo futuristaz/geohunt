@@ -12,14 +12,12 @@ namespace psi25_project
     //-----------------------------------------------------------------------------------------------
     public class DirectionPicker
     {
-        private static Random random = new Random();
-
         public static (Direction direction1, Direction direction2) GetRandomDirections()
         {
             Array values = Enum.GetValues(typeof(Direction));
 
-            Direction direction1 = (Direction)values.GetValue(random.Next(values.Length))!;
-            Direction direction2 = (Direction)values.GetValue(random.Next(values.Length))!;
+            Direction direction1 = (Direction)values.GetValue(Random.Shared.Next(values.Length))!;
+            Direction direction2 = (Direction)values.GetValue(Random.Shared.Next(values.Length))!;
 
             return (direction1, direction2);
         }
@@ -28,8 +26,6 @@ namespace psi25_project
 
     public class CoordinateModifier
     {
-        private static Random random = new Random();
-
         public static (double newLat, double newLng) ModifyCoordinates(double lat, double lng)
         {
             var (d1, d2) = DirectionPicker.GetRandomDirections();
@@ -44,7 +40,7 @@ namespace psi25_project
         //------------------------------------------------------------------------------
         private static (double, double) ApplyShift(double lat, double lng, Direction dir)
         {
-            double meters = random.NextDouble() * 20000;
+            double meters = Random.Shared.NextDouble() * 20000;
 
             double metersPerDegreeLat = 111320.0;
             double metersPerDegreeLng = 111320.0 * Math.Cos(lat * Math.PI / 180.0);
