@@ -10,6 +10,7 @@ using psi25_project.Repositories.Interfaces;
 using psi25_project.Models;
 using psi25_project.Data;
 using psi25_project.Middleware;
+using psi25_project.Configuration;
 using Serilog;
 using Polly;
 using Polly.Extensions.Http;
@@ -60,8 +61,8 @@ builder.Services.AddScoped<ILocationService, LocationService>();
 
 // ---------------- HTTP Client with Polly Resilience ----------------
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
-    .AddPolicyHandler(GetRetryPolicy())
-    .AddPolicyHandler(GetCircuitBreakerPolicy());
+    .AddPolicyHandler(HttpPolicyConfiguration.GetRetryPolicy())
+    .AddPolicyHandler(HttpPolicyConfiguration.GetCircuitBreakerPolicy());
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -172,66 +173,4 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
-}
-
-// Polly retry policy: separate policies for 429 rate limiting vs transient errors
-static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-{
-    var random = new Random();
-
-    // Policy for 429 rate limiting errors - longer delays (8s, 16s, 32s)
-    var rateLimitPolicy = Policy
-        .HandleResult<HttpResponseMessage>(r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-        .WaitAndRetryAsync(
-            retryCount: 3,
-            sleepDurationProvider: retryAttempt =>
-            {
-                var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt + 2)); // 8s, 16s, 32s
-                var jitter = TimeSpan.FromMilliseconds(random.Next(0, 1000));
-                return baseDelay + jitter;
-            },
-            onRetry: (outcome, timespan, retryCount, context) =>
-            {
-                Log.Warning("Google Maps API rate limit hit (429). Retry {RetryCount} after {Delay}s.",
-                    retryCount, timespan.TotalSeconds);
-            });
-
-    // Policy for transient errors (5xx, 408) - standard delays (2s, 4s, 8s)
-    var transientErrorPolicy = HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .WaitAndRetryAsync(
-            retryCount: 3,
-            sleepDurationProvider: retryAttempt =>
-            {
-                var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)); // 2s, 4s, 8s
-                var jitter = TimeSpan.FromMilliseconds(random.Next(0, 1000));
-                return baseDelay + jitter;
-            },
-            onRetry: (outcome, timespan, retryCount, context) =>
-            {
-                Log.Warning("Google Maps API call failed. Retry {RetryCount} after {Delay}s. Status: {StatusCode}",
-                    retryCount, timespan.TotalSeconds, outcome.Result?.StatusCode);
-            });
-
-    // Wrap both policies - rate limit policy runs first, then transient error policy
-    return Policy.WrapAsync(rateLimitPolicy, transientErrorPolicy);
-}
-
-// Circuit breaker: open circuit after 5 consecutive failures, stay open for 30 seconds
-static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
-{
-    return HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests) // 429 - consistent with retry policy
-        .CircuitBreakerAsync(
-            handledEventsAllowedBeforeBreaking: 5,
-            durationOfBreak: TimeSpan.FromSeconds(30),
-            onBreak: (outcome, duration) =>
-            {
-                Log.Error("Google Maps API circuit breaker opened for {Duration}s due to consecutive failures", duration.TotalSeconds);
-            },
-            onReset: () =>
-            {
-                Log.Information("Google Maps API circuit breaker reset - resuming normal operations");
-            });
 }
