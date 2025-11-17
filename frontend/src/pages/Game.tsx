@@ -6,7 +6,7 @@ declare global {
 }
 
 import { useEffect, useRef, useState } from 'react';
-import MiniMap from '../components/Minimap';
+import MiniMap from '../components/MiniMap';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface Coordinates {
@@ -62,6 +62,28 @@ const StreetViewApp = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ---- utility: handle API errors consistently ----
+  const handleApiError = async (response: Response, context: string) => {
+    if (!response.ok) {
+      const contentType = response.headers.get('Content-Type') || '';
+      let errorData: any = {};
+
+      if (contentType.includes('application/json')) {
+        errorData = await response.json().catch(() => ({}));
+      } else {
+        // Try to get text for non-JSON responses
+        errorData.message = await response.text().catch(() => '');
+      }
+
+      if (errorData.code === 'MAPS_UNAVAILABLE') {
+        throw new Error(`Couldn't ${context}. The map service is temporarily unavailable. Please retry in a moment.`);
+      }
+
+      const extraMsg = errorData.message ? `: ${errorData.message}` : '';
+      throw new Error(`${context} failed: ${response.status}${extraMsg}`);
+    }
+  };
+
   // ---- read state passed from Start.tsx ----
   useEffect(() => {
     const s = (location.state || {}) as Partial<GameStateFromStart>;
@@ -91,7 +113,7 @@ const StreetViewApp = () => {
   const loadRoundLocation = async () => {
     // 1) Fetch coordinates for this round
     const coordsRes = await fetch('/api/geocoding/valid_coords');
-    if (!coordsRes.ok) throw new Error(`Coords API failed: ${coordsRes.status}`);
+    await handleApiError(coordsRes, 'load Street View');
     const coordsData: GeocodingApiResponse = await coordsRes.json();
 
     const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
@@ -124,7 +146,7 @@ const StreetViewApp = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ latitude: lat, longitude: lng, panoId: coordsData.panoID }),
     });
-    if (!locRes.ok) throw new Error(`Location API failed: ${locRes.status}`);
+    await handleApiError(locRes, 'save location');
     const locData = await locRes.json();
 
     // 4) Update UI state
@@ -170,7 +192,7 @@ const StreetViewApp = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guessedCoords: selectedCoords, initialCoords }),
       });
-      if (!resultResponse.ok) throw new Error('Failed to score guess');
+      await handleApiError(resultResponse, 'calculate score');
       const resultData: { score: number; distance: number } = await resultResponse.json();
 
       // B) create guess (server updates total score, advances round, sets finished)
@@ -186,8 +208,7 @@ const StreetViewApp = () => {
           distanceKm: resultData.distance,
         }),
       });
-      if (!guessRes.ok) throw new Error('Failed to store guess');
-
+      await handleApiError(guessRes, 'save guess');
       const guessData: GuessPostResponse = await guessRes.json();
 
       if (guessData.finished) {

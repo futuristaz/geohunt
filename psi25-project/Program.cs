@@ -11,14 +11,30 @@ using psi25_project.Models;
 using psi25_project.Data;
 using psi25_project.Utils;
 using psi25_project.Models.Dtos;
+using psi25_project.Middleware;
+using psi25_project.Configuration;
+using Serilog;
+using Polly;
+using Polly.Extensions.Http;
+
+// Configure Serilog
+Log.Logger = LoggingConfiguration.CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Use Serilog for logging
+builder.Host.UseSerilog();
 
 // ---------------- Services ----------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHttpClient<GoogleMapsGateway>();
 builder.Services.AddControllers();
+
+// Register memory cache for caching Google Maps API responses
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 10_000; // Prevents unbounded memory growth
+});
 
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -32,13 +48,15 @@ builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>();
-builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>();
 builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddScoped<IGuessService, GuessService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
-
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
+// ---------------- HTTP Client with Polly Resilience ----------------
+builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
+    .AddPolicyHandler(HttpPolicyConfiguration.GetRetryPolicy())
+    .AddPolicyHandler(HttpPolicyConfiguration.GetCircuitBreakerPolicy());
 
 // ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -115,7 +133,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Use global exception handler middleware (should be first to catch all exceptions)
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
 // app.UseHttpsRedirection();
+
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -133,5 +155,19 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapFallbackToFile("/index.html"); // SPA routing in prod
 
+try
+{
+    Log.Information("Starting GeoHunt application");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
-app.Run();
+// Make the implicit Program class public for testing
+public partial class Program { }
