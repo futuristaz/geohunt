@@ -132,6 +132,15 @@ namespace psi25_project.Data
                     Description = "Score 10,000+ points in a game",
                     Scope = AchievementScope.Game,
                     IsActive = true
+                },
+                new Achievement
+                {
+                    Id = 5,
+                    Code = "CLEAN_SWEEP",
+                    Name = "Clean Sweep",
+                    Description = "All rounds in a game are <= 1 km distance",
+                    Scope = AchievementScope.Game,
+                    IsActive = true
                 }
             );
         }

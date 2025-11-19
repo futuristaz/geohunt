@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using psi25_project;
 using psi25_project.Gateways;
 using psi25_project.Gateways.Interfaces;
 using psi25_project.Services;
@@ -14,8 +13,6 @@ using psi25_project.Models.Dtos;
 using psi25_project.Middleware;
 using psi25_project.Configuration;
 using Serilog;
-using Polly;
-using Polly.Extensions.Http;
 
 // Configure Serilog
 Log.Logger = LoggingConfiguration.CreateLogger();
@@ -52,6 +49,9 @@ builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddScoped<IGuessService, GuessService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IAchievementRepository, AchievementRepository>();
+builder.Services.AddScoped<IUserStatsRepository, UserStatsRepository>();
+builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
 // ---------------- HTTP Client with Polly Resilience ----------------
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
