@@ -10,15 +10,18 @@ namespace psi25_project.Services
         private readonly IGuessRepository _guessRepository;
         private readonly IGameRepository _gameRepository;
         private readonly ILocationRepository _locationRepository;
+        private readonly IAchievementService _achievementService;
 
         public GuessService(
             IGuessRepository guessRepository,
             IGameRepository gameRepository,
-            ILocationRepository locationRepository)
+            ILocationRepository locationRepository,
+            IAchievementService achievementService)
         {
             _guessRepository = guessRepository;
             _gameRepository = gameRepository;
             _locationRepository = locationRepository;
+            _achievementService = achievementService;
         }
 
         public async Task<(GuessResponseDto guess, bool finished, int currentRound, int totalScore)>
@@ -54,6 +57,24 @@ namespace psi25_project.Services
             UpdateGameProgress(game, dto.Score);
 
             await _gameRepository.UpdateAsync(game);
+
+            // achievements handling
+            var roundUnlocks = await _achievementService.OnRoundSubmittedAsync(
+                userId: game.UserId,
+                gameId: game.Id,
+                roundNumber: guess.RoundNumber,
+                distanceKm: guess.DistanceKm,
+                score: guess.Score
+            );
+
+            if (game.FinishedAt != null)
+            {
+            var gameUnlocks = await _achievementService.OnGameFinishedAsync(
+                userId: game.UserId,
+                gameId: game.Id,
+                totalScore: game.TotalScore,
+                totalRounds: game.TotalRounds);
+            }
 
             var response = MapToDto(guess, location);
 
