@@ -16,6 +16,7 @@ using psi25_project.Configuration;
 using Serilog;
 using Polly;
 using Polly.Extensions.Http;
+using psi25_project.Hubs;
 
 // Configure Serilog
 Log.Logger = LoggingConfiguration.CreateLogger();
@@ -52,6 +53,10 @@ builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddScoped<IGuessService, GuessService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IRoomRepository, RoomRepository>();
+builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
+builder.Services.AddScoped<RoomService>();
+
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
 // ---------------- HTTP Client with Polly Resilience ----------------
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
@@ -119,8 +124,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
+builder.Services.AddSignalR(); //usr
+
 // ---------------- Build App ----------------
 var app = builder.Build();
+
+app.MapHub<GameHub>("/gamehub");
 
 if (app.Environment.IsDevelopment())
 {

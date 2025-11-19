@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace psi25_project.Models
 {
     public class Player
@@ -6,11 +8,13 @@ namespace psi25_project.Models
 
         // Link to AspNetUser
         public Guid UserId { get; set; }
-        public ApplicationUser User { get; set; }
+        [JsonIgnore]
+        public ApplicationUser? User { get; set; }
 
         // Session-based properties
         public Guid RoomId { get; set; }
-        public Room Room { get; set; }
+        [JsonIgnore]
+        public Room? Room { get; set; }
 
         public int Score { get; set; }
         public bool IsReady { get; set; }
