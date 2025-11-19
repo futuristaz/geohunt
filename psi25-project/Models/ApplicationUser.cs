@@ -11,5 +11,6 @@ namespace psi25_project.Models
 
         // Preserve relationships
         public List<Game> Games { get; set; } = new List<Game>();
+        public DateTime? LastRoomJoinedTime { get; set; }
     }
 }
