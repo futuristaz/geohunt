@@ -34,7 +34,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/Account/logout', {
         method: 'POST',
-        credentials: 'include' // include cookies for authentication
+        credentials: 'include'
       });
       if (res.ok) {
         setLoggedIn(false);
@@ -73,6 +73,13 @@ export default function Home() {
             className="px-6 py-3 bg-white text-blue-700 font-semibold rounded-xl shadow hover:bg-blue-50 transition"
           >
             Start Playing
+          </button>
+
+          <button
+            onClick={() => navigate('/joinroom')}
+            className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
+          >
+            Join Room
           </button>
 
           <button

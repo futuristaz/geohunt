@@ -8,5 +8,8 @@ namespace psi25_project.Repositories.Interfaces
     {
         Task AddPlayerAsync(Player player);
         Task<Player?> GetPlayerByUserAndRoomAsync(Guid userId, Guid roomId);
+
+        Task<Player?> GetPlayerByIdAsync(Guid playerId);
+        Task UpdatePlayerAsync(Player player);
     }
 }

@@ -43,6 +43,16 @@ namespace psi25_project.Controllers
             var players = await _roomService.GetPlayersInRoomAsync(roomCode);
             return Ok(players);
         }
+
+        // POST /api/Players/{playerId}/ready
+        [HttpPost("/api/Players/{playerId}/ready")]
+        public async Task<IActionResult> SetReady(Guid playerId)
+        {
+            var player = await _roomService.SetReadyAsync(playerId);
+            if (player == null) return NotFound();
+            return Ok(player);
+        }
+
     }
 
     public class JoinRoomDto

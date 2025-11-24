@@ -66,5 +66,15 @@ namespace psi25_project.Services
         {
             return Guid.NewGuid().ToString("N")[..5].ToUpper();
         }
+
+        public async Task<Player?> SetReadyAsync(Guid playerId)
+        {
+            var player = await _players.GetPlayerByIdAsync(playerId);
+            if (player == null) return null;
+            player.IsReady = true;
+            await _players.UpdatePlayerAsync(player);
+            return player;
+        }
+
     }
 }

@@ -5,6 +5,8 @@ import Game from './pages/Game'
 import Results from './pages/Results'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
+import JoinRoom from './pages/JoinRoom';
+import RoomLobby from './pages/RoomLobby'
 
 export default function App() {
   return (
@@ -13,10 +15,13 @@ export default function App() {
       <Route path="/start" element={<Start />} />
       <Route path="/game" element={<Game />} />
       <Route path="/results/:gameId" element={<Results />} />
-      <Route path="*" element={<div className="p-6">404 - Page Not Found</div>} />
       <Route path="/results" element={<Results/>}/>
       <Route path="/signup" element={<Signup/>}/>
       <Route path="/login" element={<Login/>}/>
+      <Route path="/joinroom" element={<JoinRoom />} />
+      <Route path="/roomlobby" element={<RoomLobby />} />
+      <Route path="/room/:roomCode" element={<RoomLobby />} />
+      <Route path="*" element={<div className="p-6">404 - Page Not Found</div>} />
     </Routes>
   )
 }

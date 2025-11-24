@@ -27,5 +27,16 @@ namespace psi25_project.Repositories
             return await _context.Players
                 .FirstOrDefaultAsync(p => p.UserId == userId && p.RoomId == roomId);
         }
+
+        public async Task<Player?> GetPlayerByIdAsync(Guid playerId)
+        {
+            return await _context.Players.FindAsync(playerId);
+        }
+
+        public async Task UpdatePlayerAsync(Player player)
+        {
+            _context.Players.Update(player);
+            await _context.SaveChangesAsync();
+        }
     }
 }
