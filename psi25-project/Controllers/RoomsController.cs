@@ -53,6 +53,22 @@ namespace psi25_project.Controllers
             return Ok(player);
         }
 
+        [HttpPost("/api/Players/{playerId}/toggle-ready")]
+        public async Task<IActionResult> ToggleReady(Guid playerId)
+        {
+            var player = await _roomService.ToggleReadyAsync(playerId);
+            if (player == null) return NotFound();
+            return Ok(player);
+        }
+
+        [HttpPost("/api/Players/{playerId}/leave-room")]
+        public async Task<IActionResult> LeaveRoom(Guid playerId)
+        {
+            var result = await _roomService.LeaveRoomAsync(playerId);
+            if (!result) return NotFound();
+            return Ok();
+        }
+
     }
 
     public class JoinRoomDto

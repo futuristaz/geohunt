@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 interface Player {
   id: string;
@@ -10,13 +10,14 @@ interface Player {
 
 export default function RoomLobby() {
   const { roomCode } = useParams<{ roomCode: string }>();
+  const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [myPlayerId, setMyPlayerId] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
 
-  // Get current user
+  // Fetch current logged-in user
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -31,7 +32,7 @@ export default function RoomLobby() {
     fetchUser();
   }, []);
 
-  // Fetch players in room
+  // Fetch players in the room
   useEffect(() => {
     if (!roomCode) return;
 
@@ -42,7 +43,6 @@ export default function RoomLobby() {
         const data: Player[] = await res.json();
         setPlayers(data);
 
-        // Set current player's ID
         const me = data.find(p => p.userId === userId);
         if (me) setMyPlayerId(me.id);
 
@@ -55,26 +55,44 @@ export default function RoomLobby() {
     };
 
     fetchPlayers();
-    const interval = setInterval(fetchPlayers, 3000); // Refresh every 3s
+    const interval = setInterval(fetchPlayers, 3000);
     return () => clearInterval(interval);
   }, [roomCode, userId]);
 
-  const handleReady = async () => {
+  // Toggle ready/unready
+  const handleToggleReady = async () => {
     if (!myPlayerId) return;
 
     try {
-      const res = await fetch(`/api/Players/${myPlayerId}/ready`, {
+      const res = await fetch(`/api/Players/${myPlayerId}/toggle-ready`, {
         method: 'POST',
         credentials: 'include'
       });
-      if (!res.ok) throw new Error('Failed to set ready');
+      if (!res.ok) throw new Error('Failed to toggle ready');
 
-      setPlayers(players.map(p =>
-        p.id === myPlayerId ? { ...p, isReady: true } : p
-      ));
+      const updatedPlayer = await res.json();
+      setPlayers(players.map(p => (p.id === myPlayerId ? updatedPlayer : p)));
     } catch (err) {
       console.error(err);
-      setError('Failed to set ready');
+      setError('Failed to toggle ready');
+    }
+  };
+
+  // Leave room
+  const handleLeaveRoom = async () => {
+    if (!myPlayerId) return;
+
+    try {
+      const res = await fetch(`/api/Players/${myPlayerId}/leave-room`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to leave room');
+
+      navigate('/joinroom'); // redirect back to join page
+    } catch (err) {
+      console.error(err);
+      setError('Failed to leave room');
     }
   };
 
@@ -90,17 +108,28 @@ export default function RoomLobby() {
           <div key={player.id} className="flex flex-col items-center p-4 bg-white/10 rounded-xl">
             <span className="text-4xl">🙂</span>
             <span className="mt-2">{player.displayName}</span>
-            <span className="mt-1 text-sm">{player.isReady ? '✅ Ready' : '❌ Not Ready'}</span>
+            <span className="mt-1 text-sm">
+              {player.isReady ? '✅ Ready' : '❌ Not Ready'}
+            </span>
           </div>
         ))}
       </div>
 
-      <button
-        onClick={handleReady}
-        className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
-      >
-        Get Ready
-      </button>
+      <div className="flex gap-4">
+        <button
+          onClick={handleToggleReady}
+          className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
+        >
+          {players.find(p => p.id === myPlayerId)?.isReady ? 'Unready' : 'Get Ready'}
+        </button>
+
+        <button
+          onClick={handleLeaveRoom}
+          className="px-6 py-3 bg-red-600 text-white font-semibold rounded-xl shadow hover:bg-red-700 transition"
+        >
+          Leave Room
+        </button>
+      </div>
     </main>
   );
 }

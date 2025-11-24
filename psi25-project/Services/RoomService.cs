@@ -76,5 +76,28 @@ namespace psi25_project.Services
             return player;
         }
 
+        public async Task<Player?> ToggleReadyAsync(Guid playerId)
+        {
+            var player = await _players.GetPlayerByIdAsync(playerId);
+            if (player == null) return null;
+
+            player.IsReady = !player.IsReady; // toggle manually
+            await _players.UpdatePlayerAsync(player);
+            return player;
+        }
+
+        public async Task<bool> LeaveRoomAsync(Guid playerId)
+        {
+            var player = await _players.GetPlayerByIdAsync(playerId);
+            if (player == null) return false;
+
+            player.IsReady = false;
+            player.RoomId = null; // set to null instead of Guid.Empty
+
+            await _players.UpdatePlayerAsync(player); // ensure this calls _context.SaveChangesAsync()
+            return true;
+        }
+
+
     }
 }

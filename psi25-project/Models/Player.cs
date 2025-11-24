@@ -12,7 +12,7 @@ namespace psi25_project.Models
         public ApplicationUser? User { get; set; }
 
         // Session-based properties
-        public Guid RoomId { get; set; }
+        public Guid? RoomId { get; set; }
         [JsonIgnore]
         public Room? Room { get; set; }
 
