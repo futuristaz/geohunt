@@ -1,7 +1,8 @@
+using Microsoft.EntityFrameworkCore;
+using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Repositories.Interfaces;
-using psi25_project.Data;
-using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace psi25_project.Repositories
 {
@@ -14,13 +15,6 @@ namespace psi25_project.Repositories
             _context = context;
         }
 
-        public async Task<Room?> GetRoomByCodeAsync(string roomCode)
-        {
-            return await _context.Rooms
-                .Include(r => r.Players)
-                .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
-        }
-
         public async Task<Room> CreateRoomAsync(Room room)
         {
             _context.Rooms.Add(room);
@@ -28,9 +22,17 @@ namespace psi25_project.Repositories
             return room;
         }
 
-        public async Task SaveChangesAsync()
+        public async Task<Room?> GetRoomByCodeAsync(string roomCode)
         {
-            await _context.SaveChangesAsync();
+            return await _context.Rooms
+                .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+        }
+
+        public async Task<Room?> GetRoomWithPlayersAsync(string roomCode)
+        {
+            return await _context.Rooms
+                .Include(r => r.Players)
+                .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
         }
     }
 }

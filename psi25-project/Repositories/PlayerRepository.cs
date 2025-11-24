@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Repositories.Interfaces;
-using psi25_project.Data;
-using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading.Tasks;
 
 namespace psi25_project.Repositories
 {
@@ -14,19 +16,16 @@ namespace psi25_project.Repositories
             _context = context;
         }
 
-        public async Task<Player> AddPlayerAsync(Player player)
+        public async Task AddPlayerAsync(Player player)
         {
             _context.Players.Add(player);
             await _context.SaveChangesAsync();
-            return player;
         }
 
-        public async Task<List<Player>> GetPlayersInRoomAsync(Guid roomId)
+        public async Task<Player?> GetPlayerByUserAndRoomAsync(Guid userId, Guid roomId)
         {
             return await _context.Players
-                .Where(p => p.RoomId == roomId)
-                .Include(p => p.User)
-                .ToListAsync();
+                .FirstOrDefaultAsync(p => p.UserId == userId && p.RoomId == roomId);
         }
     }
 }

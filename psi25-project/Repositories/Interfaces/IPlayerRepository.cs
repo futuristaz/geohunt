@@ -1,10 +1,12 @@
 using psi25_project.Models;
+using System;
+using System.Threading.Tasks;
 
 namespace psi25_project.Repositories.Interfaces
 {
     public interface IPlayerRepository
     {
-        Task<Player> AddPlayerAsync(Player player);
-        Task<List<Player>> GetPlayersInRoomAsync(Guid roomId);
+        Task AddPlayerAsync(Player player);
+        Task<Player?> GetPlayerByUserAndRoomAsync(Guid userId, Guid roomId);
     }
 }
