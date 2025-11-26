@@ -21,7 +21,6 @@ public class AchievementRepository : IAchievementRepository
             return Array.Empty<Achievement>();
 
         return await _context.Achievements
-            .AsNoTracking()
             .Where(a => a.IsActive && codeList.Contains(a.Code))
             .ToListAsync();
     }
@@ -33,6 +32,7 @@ public class AchievementRepository : IAchievementRepository
             return Array.Empty<UserAchievement>();
 
         return await _context.UserAchievements
+            .Include(ua => ua.Achievement)
             .AsNoTracking()
             .Where(ua => ua.UserId == userId && ids.Contains(ua.AchievementId))
             .ToListAsync();

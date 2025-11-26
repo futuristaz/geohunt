@@ -95,54 +95,6 @@ namespace psi25_project.Data
 
             entity.Property(a => a.IsActive)
                 .HasDefaultValue(true);
-
-            entity.HasData(
-                new Achievement
-                {
-                    Id = 1,
-                    Code = "FIRST_GUESS",
-                    Name = "First Guess",
-                    Description = "Make your first guess",
-                    Scope = AchievementScope.Meta,
-                    IsActive = true
-                },
-                new Achievement
-                {
-                    Id = 2,
-                    Code = "BULLSEYE_100M",
-                    Name = "Bullseye",
-                    Description = "Guess within 100 m",
-                    Scope = AchievementScope.Round,
-                    IsActive = true
-                },
-                new Achievement
-                {
-                    Id = 3,
-                    Code = "NEAR_1KM",
-                    Name = "Near Enough",
-                    Description = "Guess within 1 km",
-                    Scope = AchievementScope.Round,
-                    IsActive = true
-                },
-                new Achievement
-                {
-                    Id = 4,
-                    Code = "SCORE_10K",
-                    Name = "Five Digits",
-                    Description = "Score 10,000+ points in a game",
-                    Scope = AchievementScope.Game,
-                    IsActive = true
-                },
-                new Achievement
-                {
-                    Id = 5,
-                    Code = "CLEAN_SWEEP",
-                    Name = "Clean Sweep",
-                    Description = "All rounds in a game are <= 1 km distance",
-                    Scope = AchievementScope.Game,
-                    IsActive = true
-                }
-            );
         }
 
         private static void ConfigureUserAchievements(ModelBuilder modelBuilder)

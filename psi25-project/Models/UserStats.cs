@@ -7,6 +7,7 @@ public class UserStats
     public int TotalGames { get; set; }
     public int BestGameScore { get; set; }
     public int CurrentStreakDays { get; set; }
+    public int LongestStreakDays { get; set; }
     public DateTime? LastPlayedDateUtc { get; set; }
 
     // Nav property

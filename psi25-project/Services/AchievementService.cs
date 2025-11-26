@@ -43,7 +43,6 @@ public class AchievementService : IAchievementService
         // is this user's first guess overall
         var isFirstGuess = stats.TotalGuesses == 0;
         stats.TotalGuesses += 1;
-        stats.LastPlayedDateUtc = DateTime.UtcNow;
 
         await _userStatsRepository.UpdateAsync(stats);
 
@@ -76,23 +75,48 @@ public class AchievementService : IAchievementService
             .Where(a => !alreadyIds.Contains(a.Id))
             .Select(a => new UserAchievement
             {
-                Id = Guid.NewGuid(),
                 UserId = userId,
                 AchievementId = a.Id,
+                // Achievement = a,
                 UnlockedAt = DateTime.UtcNow
             })
             .ToList();
 
-        if (newUnlocks.Count > 0)
-            await _achievementRepository.AddNewlyUnlockedAchievementsAsync(newUnlocks);
+        if (newUnlocks.Count == 0)
+            return Array.Empty<UserAchievement>();
 
-        return newUnlocks;
+        await _achievementRepository.AddNewlyUnlockedAchievementsAsync(newUnlocks);
+
+        var unlockedWithAchievements = await _achievementRepository.GetUnlockedAsync(
+            userId,
+            newUnlocks.Select(u => u.AchievementId)
+        );
+
+        return unlockedWithAchievements;
     }
 
         public async Task<IReadOnlyList<UserAchievement>> OnGameFinishedAsync(Guid userId, Guid gameId, int totalScore, int totalRounds)
         {
             // 1) Load relevant achievements
             var catalog = await _achievementRepository.GetActiveByCodesAsync(GameFinishedCodes);
+
+            // Get / create user stats
+            var stats = await _userStatsRepository.GetOrCreateAsync(userId);
+            stats.TotalGames += 1;
+            if (totalScore > stats.BestGameScore) stats.BestGameScore = totalScore;
+
+            var today = DateTime.UtcNow.Date;
+            var lastPlayed = stats.LastPlayedDateUtc?.Date;
+
+            if (lastPlayed == null) stats.CurrentStreakDays = 1;
+            else if (lastPlayed == today) { /* do nothing */ }
+            else if (lastPlayed == today.AddDays(-1)) stats.CurrentStreakDays += 1;
+            else stats.CurrentStreakDays = 1;
+
+            stats.LastPlayedDateUtc = DateTime.UtcNow;
+            if (stats.CurrentStreakDays > stats.LongestStreakDays) stats.LongestStreakDays = stats.CurrentStreakDays; 
+
+            await _userStatsRepository.UpdateAsync(stats);
 
             // 2) Evaluate conditions
             var toUnlockCodes = new List<string>();
@@ -133,16 +157,23 @@ public class AchievementService : IAchievementService
                 .Where(a => !alreadyIds.Contains(a.Id))
                 .Select(a => new UserAchievement
                 {
-                    Id = Guid.NewGuid(),
                     UserId = userId,
                     AchievementId = a.Id,
+                    // Achievement = a,
                     UnlockedAt = DateTime.UtcNow
                 })
                 .ToList();
 
-            if (newUnlocks.Count > 0)
-                await _achievementRepository.AddNewlyUnlockedAchievementsAsync(newUnlocks);
+            if (newUnlocks.Count == 0)
+                return Array.Empty<UserAchievement>();
 
-            return newUnlocks;
+            await _achievementRepository.AddNewlyUnlockedAchievementsAsync(newUnlocks);
+
+            var unlockedWithAchievements = await _achievementRepository.GetUnlockedAsync(
+                userId,
+                newUnlocks.Select(u => u.AchievementId)
+            );
+
+            return unlockedWithAchievements;
         }
 }

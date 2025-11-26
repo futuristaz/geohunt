@@ -24,7 +24,7 @@ namespace psi25_project.Services
             _achievementService = achievementService;
         }
 
-        public async Task<(GuessResponseDto guess, bool finished, int currentRound, int totalScore)>
+        public async Task<(GuessResponseDto guess, bool finished, int currentRound, int totalScore, IReadOnlyList<AchievementUnlockDto> newAchievements)>
             CreateGuessAsync(CreateGuessDto dto)
         {
             var game = await _gameRepository.GetByIdAsync(dto.GameId)
@@ -66,19 +66,26 @@ namespace psi25_project.Services
                 distanceKm: guess.DistanceKm,
                 score: guess.Score
             );
+            
+
+            List<UserAchievement> allUnlocks = new(roundUnlocks);
 
             if (game.FinishedAt != null)
             {
-            var gameUnlocks = await _achievementService.OnGameFinishedAsync(
-                userId: game.UserId,
-                gameId: game.Id,
-                totalScore: game.TotalScore,
-                totalRounds: game.TotalRounds);
+                var gameUnlocks = await _achievementService.OnGameFinishedAsync(
+                    userId: game.UserId,
+                    gameId: game.Id,
+                    totalScore: game.TotalScore,
+                    totalRounds: game.TotalRounds);
+
+                allUnlocks.AddRange(gameUnlocks);
             }
 
             var response = MapToDto(guess, location);
 
-            return (response, game.FinishedAt != null, game.CurrentRound, game.TotalScore);
+            var newAchievements = MapToDtoList(allUnlocks);
+
+            return (response, game.FinishedAt != null, game.CurrentRound, game.TotalScore, newAchievements);
         }
 
         public async Task<List<GuessResponseDto>> GetGuessesForGameAsync(Guid gameId)
@@ -112,6 +119,29 @@ namespace psi25_project.Services
                 game.FinishedAt = DateTime.UtcNow;
             else
                 game.CurrentRound++;
+        }
+
+        private static IReadOnlyList<AchievementUnlockDto> MapToDtoList (List<UserAchievement> allUnlocks)
+        {
+            if (allUnlocks == null || allUnlocks.Count == 0)
+                return Array.Empty<AchievementUnlockDto>();
+ 
+            var dtoList = new List<AchievementUnlockDto>();
+
+            foreach (var ua in allUnlocks)
+            {
+                if (ua?.Achievement == null)
+                    continue; // or log a warning
+
+                var a = ua.Achievement;
+                dtoList.Add(new AchievementUnlockDto
+                {
+                    Code = a.Code,
+                    Name = a.Name,
+                    Description = a.Description,
+                });
+            }
+            return dtoList;
         }
     }
 }
