@@ -8,5 +8,5 @@ public interface IAchievementRepository
     Task<IReadOnlyList<UserAchievement>> GetUnlockedAsync(Guid userId, IEnumerable<int> achievementIds);
     Task AddNewlyUnlockedAchievementsAsync(IEnumerable<UserAchievement> unlocks, CancellationToken ct = default);
     Task<List<Achievement>> GetActiveAchievementsAsync();
-    Task<List<Achievement>> GetAchievementsForUserAsync(Guid userId);
+    Task<List<UserAchievement>> GetAchievementsForUserAsync(Guid userId);
 }

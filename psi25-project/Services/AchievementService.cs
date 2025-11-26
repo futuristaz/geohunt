@@ -194,9 +194,18 @@ public class AchievementService : IAchievementService
         if (unlockedAchievements == null || unlockedAchievements.Count == 0)
             return new List<AchievementDto>();
 
-        return MapToDto(unlockedAchievements);
+        // Map UserAchievement (which contains Achievement and UnlockedAt) to the DTO
+        var dtos = unlockedAchievements.Select(ua => new AchievementDto
+        {
+            Code = ua.Achievement?.Code ?? string.Empty,
+            Name = ua.Achievement?.Name ?? string.Empty,
+            Description = ua.Achievement?.Description ?? string.Empty,
+            UnlockedAt = ua.UnlockedAt
+        }).ToList();
+
+        return dtos;
     }
-    
+
     private static List<AchievementDto> MapToDto(List<Achievement> achievements)
     {
         var dtos = new List<AchievementDto>();
