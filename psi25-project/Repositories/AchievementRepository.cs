@@ -25,6 +25,35 @@ public class AchievementRepository : IAchievementRepository
             .ToListAsync();
     }
 
+    public async Task<List<Achievement>> GetActiveAchievementsAsync()
+    {
+        return await _context.Achievements
+            .Where(a => a.IsActive)
+            .ToListAsync();
+    }
+
+    public async Task<List<Achievement>> GetAchievementsForUserAsync(Guid userId)
+    {
+        // Get achievement ids the user has unlocked
+        var achievementIds = await _context.UserAchievements
+            .AsNoTracking()
+            .Where(ua => ua.UserId == userId)
+            .Select(ua => ua.AchievementId)
+            .Distinct()
+            .ToListAsync();
+
+        if (achievementIds.Count == 0)
+            return new List<Achievement>();
+
+        // Load the corresponding Achievement rows
+        var userAchievementsInfo = await _context.Achievements
+            .Where(a => achievementIds.Contains(a.Id))
+            .AsNoTracking()
+            .ToListAsync();
+
+        return userAchievementsInfo;
+    }
+
     public async Task<IReadOnlyList<UserAchievement>> GetUnlockedAsync(Guid userId, IEnumerable<int> achievementIds)
     {
         var ids = achievementIds.Distinct().ToList();
