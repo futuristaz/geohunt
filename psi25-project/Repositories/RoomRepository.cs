@@ -34,5 +34,23 @@ namespace psi25_project.Repositories
                 .Include(r => r.Players)
                 .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
         }
+
+        public async Task<Room?> DeleteRoomAsync(Guid roomId)
+        {
+            var room = await _context.Rooms.FindAsync(roomId);
+            if (room == null) return null;
+
+            _context.Rooms.Remove(room);
+            await _context.SaveChangesAsync();
+
+            return room;
+        }
+
+        public async Task<Room?> GetRoomByIdAsync(Guid roomId)
+        {
+            return await _context.Rooms
+                .Include(r => r.Players)
+                .FirstOrDefaultAsync(r => r.Id == roomId);
+        }
     }
 }

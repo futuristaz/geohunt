@@ -3,6 +3,8 @@ using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Repositories.Interfaces;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace psi25_project.Repositories
@@ -36,6 +38,29 @@ namespace psi25_project.Repositories
         public async Task UpdatePlayerAsync(Player player)
         {
             _context.Players.Update(player);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<Player>> GetPlayersByRoomIdAsync(Guid roomId)
+        {
+            return await _context.Players
+                .Where(p => p.RoomId == roomId)
+                .ToListAsync();
+        }
+
+        public async Task<Player?> RemovePlayerAsync(Guid playerId)
+        {
+            var player = await _context.Players.FindAsync(playerId);
+            if (player == null) return null;
+
+            _context.Players.Remove(player);
+            await _context.SaveChangesAsync();
+            return player;
+        }
+
+        public async Task RemovePlayerAsync(Player player)
+        {
+            _context.Players.Remove(player);
             await _context.SaveChangesAsync();
         }
     }
