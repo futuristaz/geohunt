@@ -20,16 +20,19 @@ namespace psi25_project.Services
         }
 
         // Create a new room (empty players)
-        public async Task<Room> CreateRoomAsync()
-        {
+       public async Task<Room> CreateRoomAsync(int totalRounds)
+       {
             var room = new Room
             {
                 RoomCode = GenerateCode(),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                TotalRounds = totalRounds,
+                CurrentRounds = 1
             };
 
             return await _rooms.CreateRoomAsync(room);
         }
+
 
         // Join a room → user becomes player
         public async Task<Player?> JoinRoomAsync(string roomCode, Guid userId, string displayName)

@@ -9,6 +9,8 @@ namespace psi25_project.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? EndTime { get; set; } = null;
+        public int TotalRounds { get; set; } = 1;
+        public int CurrentRounds {get; set; } = 1;
 
         public List<Player> Players { get; set; } = new();
     }

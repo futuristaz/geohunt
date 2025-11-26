@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using psi25_project.Data;
@@ -11,9 +12,11 @@ using psi25_project.Data;
 namespace psi25_project.Migrations
 {
     [DbContext(typeof(GeoHuntContext))]
-    partial class GeoHuntContextModelSnapshot : ModelSnapshot
+    [Migration("20251124140036_AddGameStateToRoom")]
+    partial class AddGameStateToRoom
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -373,18 +376,18 @@ namespace psi25_project.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CurrentRounds")
+                    b.Property<int>("CurrentRound")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("GameInProgress")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("RoomCode")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("TotalRounds")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

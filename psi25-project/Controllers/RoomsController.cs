@@ -3,6 +3,7 @@ using psi25_project.Models;
 using psi25_project.Services;
 using System;
 using System.Threading.Tasks;
+using psi25_project.Models.Dtos;
 
 namespace psi25_project.Controllers
 {
@@ -19,9 +20,9 @@ namespace psi25_project.Controllers
 
         // Create a new room
         [HttpPost("create")]
-        public async Task<IActionResult> CreateRoom()
+        public async Task<ActionResult<Room>> CreateRoom([FromBody] RoomCreateDto dto)
         {
-            var room = await _roomService.CreateRoomAsync();
+            var room = await _roomService.CreateRoomAsync(dto.TotalRounds);
             return Ok(room);
         }
 
