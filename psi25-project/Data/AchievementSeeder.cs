@@ -7,11 +7,6 @@ public class AchievementSeeder
 {
     public static async Task SeedAchievements(GeoHuntContext context)
     {
-        if (await context.Achievements.AnyAsync())
-        {
-            return;
-        }
-
         var achievements = new[]
         {
             new Achievement{
@@ -55,7 +50,18 @@ public class AchievementSeeder
             }
         };
 
-        context.Achievements.AddRange(achievements);
-        await context.SaveChangesAsync();
+        var existingCodes = await context.Achievements
+            .Select(a => a.Code)
+            .ToListAsync();
+
+        var newAchievements = achievements
+            .Where(a => !existingCodes.Contains(a.Code))
+            .ToList();
+
+        if (newAchievements.Count > 0)
+        {
+            context.Achievements.AddRange(newAchievements);
+            await context.SaveChangesAsync();
+        }
     }
 }
