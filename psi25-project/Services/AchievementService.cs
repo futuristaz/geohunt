@@ -220,4 +220,18 @@ public class AchievementService : IAchievementService
         }
         return dtos;
     }
+
+    public async Task<UserStatsDto> GetUserStatsAsync(Guid userId)
+    {
+        var stats = await _userStatsRepository.GetOrCreateAsync(userId);
+
+        var dto = new UserStatsDto 
+        {
+            TotalGames = stats.TotalGames,
+            CurrentStreakDays = stats.CurrentStreakDays,
+            LongestStreakDays = stats.CurrentStreakDays
+        };
+
+        return dto;
+    }
 }

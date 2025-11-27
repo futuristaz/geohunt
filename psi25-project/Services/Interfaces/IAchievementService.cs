@@ -9,4 +9,5 @@ public interface IAchievementService
     Task<IReadOnlyList<UserAchievement>> OnGameFinishedAsync(Guid userId, Guid gameId, int totalScore, int totalRounds);
     Task<List<AchievementDto>> GetActiveAchievementsAsync();
     Task<List<AchievementDto>> GetAchievementsForUserAsync(Guid userId);
+    Task<UserStatsDto> GetUserStatsAsync(Guid userId);
 }

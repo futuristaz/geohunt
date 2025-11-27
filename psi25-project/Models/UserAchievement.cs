@@ -6,8 +6,6 @@ public class UserAchievement
     public Guid UserId { get; set; }
     public int AchievementId { get; set; }
     public DateTime UnlockedAt { get; set; }
-
-    // Nav properties
     public ApplicationUser? User { get; set; }
     public Achievement? Achievement { get; set; }
 }

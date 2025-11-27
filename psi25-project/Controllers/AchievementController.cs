@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using psi25_project.Models;
 using psi25_project.Services.Interfaces;
 
 [ApiController]
@@ -50,6 +50,20 @@ public class AchievementController : ControllerBase
         } catch (Exception ex)
         {
             return Problem("Failed to get unlocked achievements: ", ex.Message);
+        }
+    }
+
+    [HttpGet("stats/{userId}")]
+    public async Task<ActionResult<UserStatsDto>> GetUserStats(Guid userId)
+    {
+        try
+        {
+            var stats = await _achievementService.GetUserStatsAsync(userId);
+
+            return Ok(stats);
+        } catch (Exception ex)
+        {
+            return Problem("Failed to get user stats: ", ex.Message);
         }
     }
 }
