@@ -1,5 +1,5 @@
 import { Link, Outlet } from "react-router-dom";
-import { Home, Info, User, Map } from "lucide-react";
+import { Home, Info, User, Map, Gamepad2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Layout() {
@@ -11,7 +11,10 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo Section */}
-            <div className="flex items-center gap-3">
+            <Link
+                to="/"
+            >
+              <div className="flex items-center gap-3">
               <div className="bg-linear-to-br from-blue-500 to-purple-600 p-2 rounded-lg">
                 <Map className="w-8 h-8 text-white" />
               </div>
@@ -19,6 +22,8 @@ export default function Layout() {
                 GeoHunt
               </span>
             </div>
+            </Link>
+
 
             {/* Navigation Links */}
             <div className="flex items-center gap-2">
@@ -28,6 +33,14 @@ export default function Layout() {
               >
                 <Home className="w-5 h-5" />
                 <span className="hidden sm:inline">Home</span>
+              </Link>
+
+              <Link
+                to="/start"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-blue-200 hover:bg-slate-800 hover:text-white transition-all font-semibold"
+              >
+                <Gamepad2 className="w-5 h-5" />
+                <span className="hidden sm:inline">Play</span>
               </Link>
 
               <Link
