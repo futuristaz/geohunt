@@ -7,4 +7,7 @@ public static class AchievementCodes
     public const string Near1km = "NEAR_1KM";
     public const string Score10k = "SCORE_10K";
     public const string CleanSweep = "CLEAN_SWEEP";
+    public const string StreakMaster = "STREAK_MASTER";
+    public const string TheMarahoner = "MARATHONER";
+    public const string LateNightPlayer = "LATE_NIGHT_PLAYER";
 }

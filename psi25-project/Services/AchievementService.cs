@@ -19,7 +19,10 @@ public class AchievementService : IAchievementService
     private static readonly string[] GameFinishedCodes = new[]
     {
         AchievementCodes.Score10k,
-        AchievementCodes.CleanSweep
+        AchievementCodes.CleanSweep,
+        AchievementCodes.TheMarahoner,
+        AchievementCodes.StreakMaster,
+        AchievementCodes.LateNightPlayer
     };
 
     public AchievementService(
@@ -131,6 +134,15 @@ public class AchievementService : IAchievementService
         {
             toUnlockCodes.Add(AchievementCodes.CleanSweep);
         }
+
+        // The Marathoner
+        if (stats.TotalGames == 100) toUnlockCodes.Add(AchievementCodes.TheMarahoner);
+
+        // Streak Master
+        if (stats.CurrentStreakDays == 30) toUnlockCodes.Add(AchievementCodes.StreakMaster);
+
+        // Late Night Player
+        if (DateTime.UtcNow.Hour >= 0 && DateTime.UtcNow.Hour <= 6) toUnlockCodes.Add(AchievementCodes.LateNightPlayer);
 
         if (toUnlockCodes.Count == 0)
             return Array.Empty<UserAchievement>();
