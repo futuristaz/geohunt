@@ -5,6 +5,9 @@ import {
   Trophy,
   Medal,
   HelpCircle,
+  CalendarCheck,
+  BicepsFlexed,
+  Moon
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -14,6 +17,9 @@ export const achievementIcons: Record<string, LucideIcon> = {
   NEAR_1KM: Focus,
   SCORE_10K: Trophy,
   CLEAN_SWEEP: Medal,
+  STREAK_MASTER: CalendarCheck,
+  MARATHONER: BicepsFlexed,
+  LATE_NIGHT_PLAYER: Moon
 };
 
 // fallback if code is unknown

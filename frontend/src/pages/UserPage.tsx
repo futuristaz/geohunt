@@ -87,7 +87,7 @@ export default function UserPage() {
   };
 
   return (
-    <div className="min-h-full p-6">
+    <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
             {/* Profile Header */}
             <div className="bg-linear-to-r from-slate-800 to-blue-900 rounded-2xl p-8 mb-8 border-2 border-blue-500 shadow-2xl">
@@ -201,7 +201,10 @@ export default function UserPage() {
                     {isUnlocked && achievement.unlockedAt && (
                       <div className="text-xs text-green-400 mt-1">
                         Unlocked:{" "}
-                        {new Date(achievement.unlockedAt).toLocaleString()}
+                        {new Date(achievement.unlockedAt)
+                        .toISOString()
+                        .replace("T", ", ")
+                        .slice(0, 17)}
                       </div>
                     )}
                   </div>
