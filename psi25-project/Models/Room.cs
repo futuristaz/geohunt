@@ -13,5 +13,7 @@ namespace psi25_project.Models
         public int CurrentRounds {get; set; } = 1;
 
         public List<Player> Players { get; set; } = new();
+        public double? CurrentRoundLatitude { get; set; }
+        public double? CurrentRoundLongitude { get; set; }
     }
 }
