@@ -241,7 +241,7 @@ public class AchievementService : IAchievementService
         {
             TotalGames = stats.TotalGames,
             CurrentStreakDays = stats.CurrentStreakDays,
-            LongestStreakDays = stats.CurrentStreakDays
+            LongestStreakDays = stats.LongestStreakDays
         };
 
         return dto;

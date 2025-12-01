@@ -17,3 +17,7 @@ export interface UserStatsApi {
   currentStreakDays: number,
   longestStreakDays: number
 }
+
+export interface AchievementDisplay extends UserAchievementApi {
+  uniqueId: string;
+}
