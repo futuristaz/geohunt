@@ -11,13 +11,14 @@ interface Player {
 export default function RoomLobby() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [myPlayerId, setMyPlayerId] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
+  const [myPlayerId, setMyPlayerId] = useState<string>('');
 
-  // Fetch current logged-in user
+  // 1️⃣ Fetch current logged-in user
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -27,14 +28,16 @@ export default function RoomLobby() {
         setUserId(data.id);
       } catch (err) {
         console.error(err);
+        setError('Failed to fetch user');
+        setLoading(false);
       }
     };
     fetchUser();
   }, []);
 
-  // Fetch players in the room
+  // 2️⃣ Fetch players in the room every 3 seconds
   useEffect(() => {
-    if (!roomCode) return;
+    if (!roomCode || !userId) return;
 
     const fetchPlayers = async () => {
       try {
@@ -43,13 +46,14 @@ export default function RoomLobby() {
         const data: Player[] = await res.json();
         setPlayers(data);
 
+        // Find my player
         const me = data.find(p => p.userId === userId);
         if (me) setMyPlayerId(me.id);
 
         setLoading(false);
       } catch (err) {
         console.error(err);
-        setError('Could not load players');
+        setError('Failed to load players');
         setLoading(false);
       }
     };
@@ -59,37 +63,37 @@ export default function RoomLobby() {
     return () => clearInterval(interval);
   }, [roomCode, userId]);
 
-  // Toggle ready/unready
+  // 3️⃣ Toggle ready/unready
   const handleToggleReady = async () => {
     if (!myPlayerId) return;
 
     try {
       const res = await fetch(`/api/Players/${myPlayerId}/toggle-ready`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to toggle ready');
 
-      const updatedPlayer = await res.json();
-      setPlayers(players.map(p => (p.id === myPlayerId ? updatedPlayer : p)));
+      const updatedPlayer: Player = await res.json();
+      setPlayers(prev => prev.map(p => (p.id === myPlayerId ? updatedPlayer : p)));
     } catch (err) {
       console.error(err);
       setError('Failed to toggle ready');
     }
   };
 
-  // Leave room
+  // 4️⃣ Leave room
   const handleLeaveRoom = async () => {
     if (!myPlayerId) return;
 
     try {
       const res = await fetch(`/api/Players/${myPlayerId}/leave-room`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to leave room');
 
-      navigate('/joinroom'); // redirect back to join page
+      navigate('/joinroom');
     } catch (err) {
       console.error(err);
       setError('Failed to leave room');
@@ -105,7 +109,10 @@ export default function RoomLobby() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {players.map(player => (
-          <div key={player.id} className="flex flex-col items-center p-4 bg-white/10 rounded-xl">
+          <div
+            key={player.id}
+            className="flex flex-col items-center p-4 bg-white/10 rounded-xl"
+          >
             <span className="text-4xl">🙂</span>
             <span className="mt-2">{player.displayName}</span>
             <span className="mt-1 text-sm">
@@ -115,21 +122,26 @@ export default function RoomLobby() {
         ))}
       </div>
 
-      <div className="flex gap-4">
-        <button
-          onClick={handleToggleReady}
-          className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
-        >
-          {players.find(p => p.id === myPlayerId)?.isReady ? 'Unready' : 'Get Ready'}
-        </button>
+      {/* Only show buttons if myPlayerId is known */}
+      {myPlayerId ? (
+        <div className="flex gap-4">
+          <button
+            onClick={handleToggleReady}
+            className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
+          >
+            {players.find(p => p.id === myPlayerId)?.isReady ? 'Unready' : 'Get Ready'}
+          </button>
 
-        <button
-          onClick={handleLeaveRoom}
-          className="px-6 py-3 bg-red-600 text-white font-semibold rounded-xl shadow hover:bg-red-700 transition"
-        >
-          Leave Room
-        </button>
-      </div>
+          <button
+            onClick={handleLeaveRoom}
+            className="px-6 py-3 bg-red-600 text-white font-semibold rounded-xl shadow hover:bg-red-700 transition"
+          >
+            Leave Room
+          </button>
+        </div>
+      ) : (
+        <p className="text-gray-400">Loading player info...</p>
+      )}
     </main>
   );
 }

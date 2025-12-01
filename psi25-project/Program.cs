@@ -29,7 +29,6 @@ builder.Host.UseSerilog();
 // ---------------- Services ----------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
 
 // Register memory cache for caching Google Maps API responses
 builder.Services.AddMemoryCache(options =>
@@ -55,7 +54,7 @@ builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
-builder.Services.AddScoped<RoomService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
 
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
 // ---------------- HTTP Client with Polly Resilience ----------------
@@ -122,6 +121,11 @@ builder.Services.ConfigureApplicationCookie(options =>
             return Task.CompletedTask;
         }
     };
+});
+
+builder.Services.AddControllers().AddJsonOptions(opts =>
+{
+    opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
 builder.Services.AddSignalR(); //usr

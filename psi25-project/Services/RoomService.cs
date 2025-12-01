@@ -1,5 +1,8 @@
+// Services/RoomService.cs
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Models;
+using psi25_project.Models.Dtos;
+using psi25_project.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace psi25_project.Services
 {
-    public class RoomService
+    public class RoomService : IRoomService
     {
         private readonly IRoomRepository _rooms;
         private readonly IPlayerRepository _players;
@@ -18,100 +21,112 @@ namespace psi25_project.Services
             _players = players;
         }
 
-        // Create a new room (empty players)
-        public async Task<Room> CreateRoomAsync(int totalRounds)
+        // Create a new room
+        public async Task<RoomDto> CreateRoomAsync(RoomCreateDto dto)
         {
             var room = new Room
             {
                 RoomCode = GenerateCode(),
                 CreatedAt = DateTime.UtcNow,
-                TotalRounds = totalRounds,
-                CurrentRounds = 1 // assuming this property exists in Room
+                TotalRounds = dto.TotalRounds,
+                CurrentRounds = 1
             };
 
-            return await _rooms.CreateRoomAsync(room);
+            var createdRoom = await _rooms.CreateRoomAsync(room);
+
+            return MapToRoomDto(createdRoom);
         }
 
-        // Join a room → user becomes player
-        public async Task<Player?> JoinRoomAsync(string roomCode, Guid userId, string displayName)
+        // Join a room
+        public async Task<PlayerDto?> JoinRoomAsync(JoinRoomDto dto)
         {
-            var room = await _rooms.GetRoomByCodeAsync(roomCode);
+            var room = await _rooms.GetRoomByCodeAsync(dto.RoomCode);
             if (room == null) return null;
 
-            // Prevent duplicate players in the same room
-            var existingPlayer = await _players.GetPlayerByUserAndRoomAsync(userId, room.Id);
+            var existingPlayer = await _players.GetPlayerByUserAndRoomAsync(dto.UserId, room.Id);
             if (existingPlayer != null)
-                return existingPlayer;
+                return MapToPlayerDto(existingPlayer);
 
             var player = new Player
             {
-                UserId = userId,
+                UserId = dto.UserId,
                 RoomId = room.Id,
-                DisplayName = displayName,
+                DisplayName = dto.DisplayName,
                 Score = 0,
                 IsReady = false
             };
 
             await _players.AddPlayerAsync(player);
-            return player;
+            return MapToPlayerDto(player);
         }
 
-        // Get all players in a specific room
-        public async Task<List<Player>> GetPlayersInRoomAsync(string roomCode)
+        // Get all players in a room
+        public async Task<List<PlayerDto>> GetPlayersInRoomAsync(string roomCode)
         {
             var room = await _rooms.GetRoomWithPlayersAsync(roomCode);
-            return room?.Players.ToList() ?? new List<Player>();
+            return room?.Players.Select(MapToPlayerDto).ToList() ?? new List<PlayerDto>();
         }
 
         // Mark player as ready
-        public async Task<Player?> SetReadyAsync(Guid playerId)
+        public async Task<PlayerDto?> SetReadyAsync(Guid playerId)
         {
             var player = await _players.GetPlayerByIdAsync(playerId);
             if (player == null) return null;
 
             player.IsReady = true;
             await _players.UpdatePlayerAsync(player);
-            return player;
+
+            return MapToPlayerDto(player);
         }
 
         // Toggle ready/unready
-        public async Task<Player?> ToggleReadyAsync(Guid playerId)
+        public async Task<PlayerDto?> ToggleReadyAsync(Guid playerId)
         {
             var player = await _players.GetPlayerByIdAsync(playerId);
             if (player == null) return null;
 
             player.IsReady = !player.IsReady;
             await _players.UpdatePlayerAsync(player);
-            return player;
+
+            return MapToPlayerDto(player);
         }
 
-        // Leave room → remove player, delete room if empty
+        // Leave room
         public async Task<bool> LeaveRoomAsync(Guid playerId)
         {
             var player = await _players.GetPlayerByIdAsync(playerId);
-            if (player == null) return false;
+            if (player == null || !player.RoomId.HasValue) return false;
 
-            var roomId = player.RoomId;
-            if (!roomId.HasValue)
-                return false; // room id not set
+            var roomId = player.RoomId.Value;
 
-            // Remove player
             await _players.RemovePlayerAsync(player.Id);
 
-            // Check if room is empty
-            var playersInRoom = await _players.GetPlayersByRoomIdAsync(roomId.Value);
+            var playersInRoom = await _players.GetPlayersByRoomIdAsync(roomId);
             if (!playersInRoom.Any())
             {
-                await _rooms.DeleteRoomAsync(roomId.Value);
+                await _rooms.DeleteRoomAsync(roomId);
             }
 
             return true;
         }
 
-        // Helper: generate 5-character code
-        private string GenerateCode()
+        // --- Helpers ---
+        private string GenerateCode() => Guid.NewGuid().ToString("N")[..5].ToUpper();
+
+        private RoomDto MapToRoomDto(Room room) => new RoomDto
         {
-            return Guid.NewGuid().ToString("N")[..5].ToUpper();
-        }
+            Id = room.Id,
+            RoomCode = room.RoomCode,
+            TotalRounds = room.TotalRounds,
+            CurrentRounds = room.CurrentRounds
+        };
+
+        private PlayerDto MapToPlayerDto(Player player) => new PlayerDto
+        {
+            Id = player.Id,
+            UserId = player.UserId,
+            DisplayName = player.DisplayName,
+            IsReady = player.IsReady
+        };
     }
 }
