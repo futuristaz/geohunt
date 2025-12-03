@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using psi25_project;
 using psi25_project.Gateways;
 using psi25_project.Gateways.Interfaces;
 using psi25_project.Services;
@@ -14,26 +13,21 @@ using psi25_project.Models.Dtos;
 using psi25_project.Middleware;
 using psi25_project.Configuration;
 using Serilog;
-using Polly;
-using Polly.Extensions.Http;
 using psi25_project.Hubs;
 
-// Configure Serilog
 Log.Logger = LoggingConfiguration.CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Use Serilog for logging
 builder.Host.UseSerilog();
 
 // ---------------- Services ----------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register memory cache for caching Google Maps API responses
 builder.Services.AddMemoryCache(options =>
 {
-    options.SizeLimit = 10_000; // Prevents unbounded memory growth
+    options.SizeLimit = 10_000;
 });
 
 builder.Services.AddDbContext<GeoHuntContext>(options =>
@@ -55,17 +49,16 @@ builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddSingleton<IRoomOnlineService, RoomOnlineService>();
 
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
-// ---------------- HTTP Client with Polly Resilience ----------------
+
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
     .AddPolicyHandler(HttpPolicyConfiguration.GetRetryPolicy())
     .AddPolicyHandler(HttpPolicyConfiguration.GetCircuitBreakerPolicy());
 
-// ---------------- Identity Setup ----------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 {
-    // Optional: Password and user settings
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = false;
     options.Password.RequireUppercase = false;
@@ -75,23 +68,23 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 .AddEntityFrameworkStores<GeoHuntContext>()
 .AddDefaultTokenProviders();
 
-builder.Services.AddCors(o =>
+// CORS
+builder.Services.AddCors(options =>
 {
-    o.AddDefaultPolicy(p => p
-        .WithOrigins("http://localhost:5042")
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials());
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        policy.WithOrigins("http://localhost:5042") // React dev server
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
 });
 
-
-// Configure login/logout cookie behavior
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
-
     options.Cookie.SameSite = SameSiteMode.Lax;
 
     options.Events.OnRedirectToLogin = ctx =>
@@ -128,13 +121,13 @@ builder.Services.AddControllers().AddJsonOptions(opts =>
     opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
-builder.Services.AddSignalR(); //usr
+// SignalR
+builder.Services.AddSignalR();
 
 // ---------------- Build App ----------------
 var app = builder.Build();
 
-app.MapHub<GameHub>("/gamehub");
-
+// ---------------- Middleware ----------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -146,28 +139,35 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Use global exception handler middleware (should be first to catch all exceptions)
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
-// app.UseHttpsRedirection();
 
-app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider
-        .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-    await RoleSeeder.SeedRoles(roleManager);
-}
+// ---------------- Routing & CORS ----------------
+app.UseRouting();
+
+app.UseCors("CorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ---------------- Map Endpoints ----------------
 app.MapControllers();
-app.MapFallbackToFile("/index.html"); // SPA routing in prod
 
+app.MapHub<RoomHub>("/roomHub");
+
+app.MapFallbackToFile("/index.html");
+
+// ---------------- Seed Roles ----------------
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    await RoleSeeder.SeedRoles(roleManager);
+}
+
+// ---------------- Run ----------------
 try
 {
     Log.Information("Starting GeoHunt application");
@@ -182,5 +182,4 @@ finally
     Log.CloseAndFlush();
 }
 
-// Make the implicit Program class public for testing
 public partial class Program { }
