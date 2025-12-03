@@ -18,6 +18,10 @@ export interface UserStatsApi {
   longestStreakDays: number
 }
 
+export interface Achievement extends AchievementApi {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}
+
 export interface AchievementDisplay extends UserAchievementApi {
   uniqueId: string;
 }

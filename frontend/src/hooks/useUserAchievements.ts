@@ -15,9 +15,15 @@ export function useUserAchievements(userId: string) {
         setError(null);
         const res = await fetch(`/api/Achievement/achievements/${userId}`);
         if (!res.ok) throw new Error("Failed to fetch user achievements");
+        
+        const text = await res.text();
+        if (!text.trim()) {
+          setUserAchievements([]);
+          return;
+        }
 
-        const data: UserAchievementApi[] = await res.json();
-        setUserAchievements(data);
+        const data: UserAchievementApi[] = JSON.parse(text);
+        setUserAchievements(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(err);
       } finally {

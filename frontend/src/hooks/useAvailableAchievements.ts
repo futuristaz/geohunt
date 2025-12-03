@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import type { AchievementApi } from "../types/achievements";
+import type { AchievementApi, Achievement } from "../types/achievements";
 import { achievementIcons, defaultAchievementIcon } from "../icons/achievmentIcons";
-
-export interface Achievement extends AchievementApi {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-}
 
 export function useAvailableAchievements() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
