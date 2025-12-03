@@ -18,6 +18,8 @@ namespace psi25_project.Data
         public DbSet<Guess> Guesses { get; set; }
         public DbSet<Room> Rooms { get; set; }
         public DbSet<Player> Players { get; set; }
+        public DbSet<MultiplayerGame> MultiplayerGames { get; set; }
+        public DbSet<MultiplayerPlayer> MultiplayerPlayers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -56,6 +58,24 @@ namespace psi25_project.Data
                 .HasOne(p => p.User)
                 .WithMany()
                 .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<MultiplayerGame>()
+                .HasOne(g => g.Room)
+                .WithMany()
+                .HasForeignKey(g => g.RoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<MultiplayerPlayer>()
+                .HasOne(mp => mp.Game)
+                .WithMany(g => g.Players)
+                .HasForeignKey(mp => mp.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<MultiplayerPlayer>()
+                .HasOne(mp => mp.Player)
+                .WithMany()
+                .HasForeignKey(mp => mp.PlayerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Unique coordinates
