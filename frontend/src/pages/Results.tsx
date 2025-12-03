@@ -1,6 +1,7 @@
 // src/pages/Results.tsx
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import RoundResultMap from "../components/RoundResultMap";
 
 type ResultsState = {
   gameId: string;
@@ -107,6 +108,11 @@ export default function Results() {
                 <div>Your guess: {result.guessedLatitude.toFixed(5)}, {result.guessedLongitude.toFixed(5)}</div>
               </div>
             </div>
+            <RoundResultMap
+              actual={{ lat: result.actualLatitude, lng: result.actualLongitude }}
+              guess={{ lat: result.guessedLatitude, lng: result.guessedLongitude }}
+              distanceKm={result.distanceKm}
+            />
           </div>
         ))}
       </div>
