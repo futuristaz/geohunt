@@ -8,6 +8,8 @@ declare global {
 import { useEffect, useRef, useState } from 'react';
 import MiniMap from '../components/MiniMap';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { AchievementPopup } from '../components/AchievementPopup';
+import type { AchievementDisplay, UserAchievementApi } from '../types/achievements';
 
 interface Coordinates {
   lat: number;
@@ -40,6 +42,7 @@ type GuessPostResponse = {
   finished: boolean;
   currentRound: number; // new current round (advanced or same if finished)
   totalScore: number;
+  achievementsUnlocked: UserAchievementApi[];
 };
 
 const StreetViewApp = () => {
@@ -61,6 +64,11 @@ const StreetViewApp = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [achievementQueue, setAchievementQueue] = useState<AchievementDisplay[]>([]);
+  const [currentAchievementPopup, setCurrentAchievementPopup] = useState<AchievementDisplay | null>(null);
+  const achievementSoundRef = useRef<HTMLAudioElement | null>(null);
+  const [finishedGamePending, setFinishedGamePending] = useState(false);
 
   // ---- utility: handle API errors consistently ----
   const handleApiError = async (response: Response, context: string) => {
@@ -183,6 +191,11 @@ const StreetViewApp = () => {
       return;
     }
 
+    if (!achievementSoundRef.current) {
+      achievementSoundRef.current = new Audio("/sounds/achievement-unlocked.mp3");
+      achievementSoundRef.current.volume = 0.8;
+    }
+
     try {
       setSubmitting(true);
 
@@ -210,15 +223,33 @@ const StreetViewApp = () => {
       });
       await handleApiError(guessRes, 'save guess');
       const guessData: GuessPostResponse = await guessRes.json();
+      console.log("Guess response:", guessData);
+      console.log("Achievements unlocked:", guessData.achievementsUnlocked);
+
+      if (guessData.achievementsUnlocked.length > 0) {
+        const newDisplayItems: AchievementDisplay[] =
+          guessData.achievementsUnlocked.map((a) => ({
+            ...a,
+            uniqueId: `${a.code}-${a.unlockedAt}-${Math.random().toString(36).slice(2)}`
+          }));
+
+        console.log("New achievements for queue:", newDisplayItems);
+
+        setAchievementQueue((prev) => [...prev, ...newDisplayItems]);
+      }
 
       if (guessData.finished) {
-        // FINISHED → go to results
-        navigate(`/results/${gameId}`, {
-          state: {
-            gameId,
-          },
-          replace: true,
-        });
+        if (guessData.achievementsUnlocked.length === 0) {
+          // No achievements to show → just go to results immediately
+          navigate(`/results/${gameId}`, {
+            state: { gameId },
+            replace: true,
+          });
+        } else {
+          // Achievements were unlocked → remember that we should navigate
+          // later, after the popups have been shown
+          setFinishedGamePending(true);
+        }
         return;
       }
 
@@ -232,6 +263,49 @@ const StreetViewApp = () => {
       setSubmitting(false);
     }
   };
+
+  const handleCloseCurrentAchievement = () => {
+    setAchievementQueue((prevQueue) => {
+      const [, ...rest] = prevQueue;
+
+      if (rest.length === 0) {
+        // No more achievements in the queue
+        setCurrentAchievementPopup(null);
+
+        if (finishedGamePending && gameId) {
+          // We were on the last round, and now all popups are shown → go to results
+          navigate(`/results/${gameId}`, {
+            state: { gameId },
+            replace: true,
+          });
+        }
+      } else {
+        // Show the next one
+        setCurrentAchievementPopup(rest[0]);
+      }
+
+      return rest;
+    });
+  };
+
+  useEffect(() => {
+    if (!currentAchievementPopup && achievementQueue.length > 0) {
+      console.log("Showing popup for:", achievementQueue[0]);
+      setCurrentAchievementPopup(achievementQueue[0]);
+    }
+  }, [achievementQueue, currentAchievementPopup]);
+
+  useEffect(() => {
+    if (!currentAchievementPopup) return;
+    if (!achievementSoundRef.current) return;
+
+    achievementSoundRef.current.currentTime = 0;
+    achievementSoundRef.current
+      .play()
+      .catch((err) => {
+        console.warn("Failed to play achievement sound:", err);
+      });
+  }, [currentAchievementPopup]);
 
   return (
     <div className="relative h-screen w-screen">
@@ -282,13 +356,20 @@ const StreetViewApp = () => {
           style={{ width: 300, height: 200 }}
         />
         <button
-          className="px-3 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          className="px-3 py-3 bg-slate-900 text-white font-semibold rounded-xl shadow hover:bg-slate-800 transition disabled:opacity-60 disabled:cursor-not-allowed border-slate-700"
           onClick={handleSubmitGuess}
           disabled={!selectedCoords || submitting || !!error || loading}
         >
           {submitting ? 'Submitting…' : selectedCoords ? 'Submit Guess' : 'Select a location on the map'}
         </button>
       </div>
+
+      <AchievementPopup
+        achievement={currentAchievementPopup}
+        isOpen={!!currentAchievementPopup}
+        onClose={handleCloseCurrentAchievement}
+        autoCloseMs={3000} // or undefined if you want manual-only closing
+      />
     </div>
   );
 };

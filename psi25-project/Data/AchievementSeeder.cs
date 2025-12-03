@@ -9,7 +9,8 @@ public class AchievementSeeder
     {
         var achievements = new[]
         {
-            new Achievement{
+            new Achievement
+            {
                 Code = "FIRST_GUESS",
                 Name = "First Guess",
                 Description = "Make your first guess",
@@ -45,6 +46,30 @@ public class AchievementSeeder
                 Code = "CLEAN_SWEEP",
                 Name = "Clean Sweep",
                 Description = "All rounds in a game are <= 1 km distance",
+                Scope = AchievementScope.Game,
+                IsActive = true
+            },
+            new Achievement
+            {
+                Code = "STREAK_MASTER",
+                Name = "Streak Master",
+                Description = "Achieve a 30-day streak of playing every day",
+                Scope = AchievementScope.Meta,
+                IsActive = true
+            },
+            new Achievement
+            {
+                Code = "MARATHONER",
+                Name = "The Marathoner",
+                Description = "Play 100 games",
+                Scope = AchievementScope.Meta,
+                IsActive = true
+            },
+            new Achievement
+            {
+                Code = "LATE_NIGHT_PLAYER",
+                Name = "Late Night Player",
+                Description = "Play a game between midnight and 6 AM",
                 Scope = AchievementScope.Game,
                 IsActive = true
             }

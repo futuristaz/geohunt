@@ -5,18 +5,25 @@ import Game from './pages/Game'
 import Results from './pages/Results'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
+import UserPage from './pages/UserPage'
+import Layout from './components/Layout'
+import About from './pages/About'
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/start" element={<Start />} />
+    <Routes>    
       <Route path="/game" element={<Game />} />
       <Route path="/results/:gameId" element={<Results />} />
       <Route path="*" element={<div className="p-6">404 - Page Not Found</div>} />
       <Route path="/results" element={<Results/>}/>
       <Route path="/signup" element={<Signup/>}/>
       <Route path="/login" element={<Login/>}/>
+      <Route element={<Layout/>}>
+        <Route path="/user" element={<UserPage/>}/>
+        <Route path="/start" element={<Start />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About/>}/>
+      </Route>
     </Routes>
   )
 }
