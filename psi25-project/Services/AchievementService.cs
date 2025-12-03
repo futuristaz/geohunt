@@ -20,7 +20,7 @@ public class AchievementService : IAchievementService
     {
         AchievementCodes.Score10k,
         AchievementCodes.CleanSweep,
-        AchievementCodes.TheMarahoner,
+        AchievementCodes.TheMarathoner,
         AchievementCodes.StreakMaster,
         AchievementCodes.LateNightPlayer
     };
@@ -136,7 +136,7 @@ public class AchievementService : IAchievementService
         }
 
         // The Marathoner
-        if (stats.TotalGames == 100) toUnlockCodes.Add(AchievementCodes.TheMarahoner);
+        if (stats.TotalGames == 100) toUnlockCodes.Add(AchievementCodes.TheMarathoner);
 
         // Streak Master
         if (stats.CurrentStreakDays == 30) toUnlockCodes.Add(AchievementCodes.StreakMaster);
