@@ -1,5 +1,9 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace psi25_project.Models
 {
+    public enum RoomStatus { Lobby, InGame, Finished }
+
     public class Room
     {
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -9,11 +13,18 @@ namespace psi25_project.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? EndTime { get; set; } = null;
+
+        // Rooms generally don't need to persist current round — games do.
         public int TotalRounds { get; set; } = 1;
-        public int CurrentRounds {get; set; } = 1;
+
+        // renamed to singular for clarity
+        public int CurrentRounds { get; set; } = 1;
 
         public List<Player> Players { get; set; } = new();
-        public double? CurrentRoundLatitude { get; set; }
-        public double? CurrentRoundLongitude { get; set; }
+
+        public RoomStatus Status { get; set; } = RoomStatus.Lobby;
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = null!;
     }
 }

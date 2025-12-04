@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import * as signalR from "@microsoft/signalr";
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import * as signalR from '@microsoft/signalr';
 
 interface Player {
   id: string;
@@ -15,9 +15,9 @@ export default function RoomLobby() {
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [userId, setUserId] = useState<string>("");
-  const [myPlayerId, setMyPlayerId] = useState<string>("");
+  const [error, setError] = useState('');
+  const [userId, setUserId] = useState('');
+  const [myPlayerId, setMyPlayerId] = useState('');
 
   const connectionRef = useRef<signalR.HubConnection | null>(null);
 
@@ -25,13 +25,13 @@ export default function RoomLobby() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("/api/User/me", { credentials: "include" });
-        if (!res.ok) throw new Error("User not logged in");
+        const res = await fetch('/api/User/me', { credentials: 'include' });
+        if (!res.ok) throw new Error('User not logged in');
         const data = await res.json();
         setUserId(data.id);
       } catch (err) {
         console.error(err);
-        setError("Failed to fetch user");
+        setError('Failed to fetch user');
       } finally {
         setLoading(false);
       }
@@ -46,10 +46,9 @@ export default function RoomLobby() {
     const fetchPlayers = async () => {
       try {
         const res = await fetch(`/api/Rooms/${roomCode}/players`, {
-          credentials: "include",
+          credentials: 'include',
         });
-        if (!res.ok) throw new Error("Failed to load players");
-
+        if (!res.ok) throw new Error('Failed to load players');
         const data: Player[] = await res.json();
         setPlayers(data);
 
@@ -57,7 +56,7 @@ export default function RoomLobby() {
         if (me) setMyPlayerId(me.id);
       } catch (err) {
         console.error(err);
-        setError("Failed to load players");
+        setError('Failed to load players');
       }
     };
 
@@ -69,40 +68,34 @@ export default function RoomLobby() {
     if (!roomCode || !myPlayerId) return;
 
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5041/roomHub", { withCredentials: true })
+      .withUrl('http://localhost:5041/roomHub', { withCredentials: true })
       .withAutomaticReconnect()
       .build();
 
     connectionRef.current = connection;
 
-    // Events
-    connection.on("PlayerJoined", (displayName: string) => {
+    connection.on('PlayerJoined', (displayName: string) => {
       setPlayers((prev) => [
         ...prev,
-        { id: `${displayName}-${Date.now()}`, userId: "", displayName, isReady: false },
+        { id: `${displayName}-${Date.now()}`, userId: '', displayName, isReady: false },
       ]);
     });
 
-    connection.on("PlayerLeft", (playerId: string) => {
+    connection.on('PlayerLeft', (playerId: string) => {
       setPlayers((prev) => prev.filter((p) => p.id !== playerId));
     });
 
-    connection.on("PlayerListUpdated", (onlinePlayers: Player[]) => {
+    connection.on('PlayerListUpdated', (onlinePlayers: Player[]) => {
       setPlayers(onlinePlayers);
     });
 
     const start = async () => {
       try {
         await connection.start();
-        console.log("Connected to RoomHub");
+        console.log('Connected to RoomHub');
 
         const me = players.find((p) => p.id === myPlayerId);
-        await connection.invoke(
-          "JoinRoom",
-          roomCode,
-          myPlayerId,
-          me?.displayName ?? "Unknown"
-        );
+        await connection.invoke('JoinRoom', roomCode, myPlayerId, me?.displayName ?? 'Unknown');
       } catch (err) {
         console.error(err);
       }
@@ -115,56 +108,76 @@ export default function RoomLobby() {
     };
   }, [roomCode, myPlayerId]);
 
-  // Toggle ready/unready
   const handleToggleReady = async () => {
     if (!myPlayerId || !connectionRef.current) return;
-
     try {
       const res = await fetch(`/api/Players/${myPlayerId}/toggle-ready`, {
-        method: "POST",
-        credentials: "include",
+        method: 'POST',
+        credentials: 'include',
       });
-      if (!res.ok) throw new Error("Failed to toggle ready");
-
+      if (!res.ok) throw new Error('Failed to toggle ready');
       const updatedPlayer: Player = await res.json();
-      setPlayers((prev) =>
-        prev.map((p) => (p.id === myPlayerId ? updatedPlayer : p))
-      );
-
-      // Broadcast via SignalR
-      await connectionRef.current.invoke(
-        "UpdateReadyState",
-        roomCode,
-        myPlayerId,
-        updatedPlayer.isReady
-      );
+      setPlayers((prev) => prev.map((p) => (p.id === myPlayerId ? updatedPlayer : p)));
+      await connectionRef.current.invoke('UpdateReadyState', roomCode, myPlayerId, updatedPlayer.isReady);
     } catch (err) {
       console.error(err);
-      setError("Failed to toggle ready");
+      setError('Failed to toggle ready');
     }
   };
 
-  // Leave room
   const handleLeaveRoom = async () => {
     if (!myPlayerId || !connectionRef.current) return;
-
     try {
-      const res = await fetch(`/api/Players/${myPlayerId}/leave-room`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to leave room");
-
-      await connectionRef.current.invoke("LeaveRoom", roomCode);
-
-      navigate("/joinroom");
+      await fetch(`/api/Players/${myPlayerId}/leave-room`, { method: 'POST', credentials: 'include' });
+      await connectionRef.current.invoke('LeaveRoom', roomCode);
+      navigate('/joinroom');
     } catch (err) {
       console.error(err);
-      setError("Failed to leave room");
+      setError('Failed to leave room');
     } finally {
       connectionRef.current.stop();
     }
   };
+
+  const handleStartGame = async () => {
+    if (!connectionRef.current || !roomCode) return;
+
+    try {
+      const res = await fetch(`/api/multiplayer/start`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          roomId: roomCode,
+          totalRounds: 3
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to start game");
+
+      const game = await res.json(); // contains game.id
+      console.log("Game started:", game);
+
+      // Redirect all players
+      navigate(`/multiplayer/${roomCode}/${game.id}`);
+
+      // Inform other players through SignalR (broadcast)
+      await connectionRef.current.invoke(
+        "StartGame",
+        roomCode,
+        game.id
+      );
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to start game");
+    }
+  };
+
+
+  const allReady = players.length > 0 && players.every((p) => p.isReady);
 
   if (loading) return <p className="text-white">Loading room...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
@@ -175,28 +188,31 @@ export default function RoomLobby() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {players.map((player, index) => (
-          <div
-            key={player.id || player.userId || index}
-            className="flex flex-col items-center p-4 bg-white/10 rounded-xl"
-          >
+          <div key={player.id || player.userId || index} className="flex flex-col items-center p-4 bg-white/10 rounded-xl">
             <span className="text-4xl">🙂</span>
             <span className="mt-2">{player.displayName}</span>
-            <span className="mt-1 text-sm">
-              {player.isReady ? "✅ Ready" : "❌ Not Ready"}
-            </span>
+            <span className="mt-1 text-sm">{player.isReady ? '✅ Ready' : '❌ Not Ready'}</span>
           </div>
         ))}
       </div>
 
-      {myPlayerId ? (
+      {myPlayerId && (
         <div className="flex gap-4">
           <button
             onClick={handleToggleReady}
             className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
           >
-            {players.find((p) => p.id === myPlayerId)?.isReady
-              ? "Unready"
-              : "Get Ready"}
+            {players.find((p) => p.id === myPlayerId)?.isReady ? 'Unready' : 'Get Ready'}
+          </button>
+
+          <button
+            onClick={handleStartGame}
+            disabled={!allReady}
+            className={`px-6 py-3 font-semibold rounded-xl shadow transition ${
+              allReady ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-500 text-gray-300 cursor-not-allowed'
+            }`}
+          >
+            Start Game
           </button>
 
           <button
@@ -206,8 +222,6 @@ export default function RoomLobby() {
             Leave Room
           </button>
         </div>
-      ) : (
-        <p className="text-gray-400">Loading player info...</p>
       )}
     </main>
   );

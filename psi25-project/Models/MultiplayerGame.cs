@@ -1,8 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace psi25_project.Models
 {
+    public enum GameState { Waiting, InProgress, Finished }
+
     public class MultiplayerGame
     {
         public Guid Id { get; set; }
+
         public Guid RoomId { get; set; }
         public Room Room { get; set; } = null!;
 
@@ -12,7 +17,15 @@ namespace psi25_project.Models
         public int CurrentRound { get; set; } = 1;
         public int TotalRounds { get; set; } = 3;
 
-        // Tracks players in this multiplayer session
+        // round's target answer (coordinates) — move from Room to Game
+        public double? RoundLatitude { get; set; }
+        public double? RoundLongitude { get; set; }
+
         public List<MultiplayerPlayer> Players { get; set; } = new();
+
+        public GameState State { get; set; } = GameState.Waiting;
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = null!;
     }
 }
