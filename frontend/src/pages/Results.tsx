@@ -99,20 +99,29 @@ export default function Results() {
       <div className="space-y-4">
         {results.map((result, index) => (
           <div key={index} className="border rounded-lg p-4 bg-gray-50">
-            <h3 className="font-semibold mb-2 text-blue-900">Round {index + 1}</h3>
-            <div className="space-y-1 text-sm text-blue-800">
-              <div>Score: <b>{result.score}</b> points</div>
-              <div>Distance: <b>{result.distanceKm}</b> km</div>
-              <div className="text-gray-700">
-                <div>Actual: {result.actualLatitude.toFixed(5)}, {result.actualLongitude.toFixed(5)}</div>
-                <div>Your guess: {result.guessedLatitude.toFixed(5)}, {result.guessedLongitude.toFixed(5)}</div>
+            <div className="flex gap-4">
+              {/* Left side - Round data */}
+              <div className="flex-shrink-0">
+                <h3 className="font-semibold mb-2 text-blue-900">Round {index + 1}</h3>
+                <div className="space-y-1 text-sm text-blue-800">
+                  <div>Score: <b>{result.score}</b> points</div>
+                  <div>Distance: <b>{result.distanceKm}</b> km</div>
+                  <div className="text-gray-700">
+                    <div>Actual: {result.actualLatitude.toFixed(5)}, {result.actualLongitude.toFixed(5)}</div>
+                    <div>Your guess: {result.guessedLatitude.toFixed(5)}, {result.guessedLongitude.toFixed(5)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right side - Map */}
+              <div className="flex-1">
+                <RoundResultMap
+                  actual={{ lat: result.actualLatitude, lng: result.actualLongitude }}
+                  guess={{ lat: result.guessedLatitude, lng: result.guessedLongitude }}
+                  distanceKm={result.distanceKm}
+                />
               </div>
             </div>
-            <RoundResultMap
-              actual={{ lat: result.actualLatitude, lng: result.actualLongitude }}
-              guess={{ lat: result.guessedLatitude, lng: result.guessedLongitude }}
-              distanceKm={result.distanceKm}
-            />
           </div>
         ))}
       </div>
