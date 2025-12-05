@@ -57,6 +57,8 @@ export default function RoundResultMap({
       bounds.extend(actualLatLng);
       bounds.extend(guessLatLng);
 
+      if (!map) return;
+
       if (identical) {
         map.setCenter(actualLatLng);
         map.setZoom(6);

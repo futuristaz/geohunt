@@ -338,7 +338,6 @@ const StreetViewApp = () => {
           initialZoom={1}
           onSelect={(coords) => {
             setSelectedCoords(coords);
-            // console.log('Selected coords from MiniMap:', coords);
           }}
           className="overflow-hidden shadow-lg rounded-xl"
           style={{ width: 300, height: 200 }}

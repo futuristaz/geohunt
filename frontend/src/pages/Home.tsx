@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Home() {
   const navigate = useNavigate();
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [username, setUsername] = useState('');
 
   useEffect(() => {
@@ -15,15 +14,12 @@ export default function Home() {
         });
         if (res.ok) {
           const data = await res.json();
-          setLoggedIn(true);
           setUsername(data.username);
         } else {
-          setLoggedIn(false);
           navigate('/login', { replace: true });
         }
       } catch (error) {
         console.error('Error checking login status:', error);
-        setLoggedIn(false);
         navigate('/login', { replace: true });
       }
     };
@@ -37,7 +33,6 @@ export default function Home() {
         credentials: 'include' // include cookies for authentication
       });
       if (res.ok) {
-        setLoggedIn(false);
         navigate('/login', { replace: true });
       } else {
         console.error('Logout failed');
