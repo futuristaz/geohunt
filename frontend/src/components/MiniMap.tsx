@@ -230,23 +230,6 @@ export default function MiniMap({
         ref={containerRef}
         style={{ position: "absolute", inset: 0 }}
       />
-      {selected && (
-        <div
-          style={{
-            position: "absolute",
-            left: 8,
-            bottom: 8,
-            padding: "6px 8px",
-            background: "rgba(0,0,0,0.6)",
-            color: "white",
-            borderRadius: 6,
-            fontSize: 12,
-            zIndex: 1000
-          }}
-        >
-          {selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}
-        </div>
-      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using psi25_project;
 using psi25_project.Gateways;
 using psi25_project.Gateways.Interfaces;
 using psi25_project.Services;
@@ -14,8 +13,6 @@ using psi25_project.Models.Dtos;
 using psi25_project.Middleware;
 using psi25_project.Configuration;
 using Serilog;
-using Polly;
-using Polly.Extensions.Http;
 
 // Configure Serilog
 Log.Logger = LoggingConfiguration.CreateLogger();
@@ -49,9 +46,13 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddScoped<IGuessRepository, GuessRepository>();
+builder.Services.AddScoped<IAchievementService, AchievementService>();
 builder.Services.AddScoped<IGuessService, GuessService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IAchievementRepository, AchievementRepository>();
+builder.Services.AddScoped<IUserStatsRepository, UserStatsRepository>();
+builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
 // ---------------- HTTP Client with Polly Resilience ----------------
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
@@ -143,6 +144,11 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 using (var scope = app.Services.CreateScope())
 {
+    var context = scope.ServiceProvider.GetRequiredService<GeoHuntContext>();
+
+    await context.Database.MigrateAsync();
+    await AchievementSeeder.SeedAchievements(context);
+    
     var roleManager = scope.ServiceProvider
         .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 

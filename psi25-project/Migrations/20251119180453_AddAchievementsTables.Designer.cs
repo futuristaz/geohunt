@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using psi25_project.Data;
@@ -11,9 +12,11 @@ using psi25_project.Data;
 namespace psi25_project.Migrations
 {
     [DbContext(typeof(GeoHuntContext))]
-    partial class GeoHuntContextModelSnapshot : ModelSnapshot
+    [Migration("20251119180453_AddAchievementsTables")]
+    partial class AddAchievementsTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -189,6 +192,44 @@ namespace psi25_project.Migrations
                         .IsUnique();
 
                     b.ToTable("Achievements");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "FIRST_GUESS",
+                            Description = "Make your first guess",
+                            IsActive = true,
+                            Name = "First Guess",
+                            Scope = 2
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "BULLSEYE_100M",
+                            Description = "Guess within 100 m",
+                            IsActive = true,
+                            Name = "Bullseye",
+                            Scope = 0
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "NEAR_1KM",
+                            Description = "Guess within 1 km",
+                            IsActive = true,
+                            Name = "Near Enough",
+                            Scope = 0
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "SCORE_10K",
+                            Description = "Score 10,000+ points in a game",
+                            IsActive = true,
+                            Name = "Five Digits",
+                            Scope = 1
+                        });
                 });
 
             modelBuilder.Entity("psi25_project.Models.ApplicationUser", b =>
@@ -413,9 +454,6 @@ namespace psi25_project.Migrations
 
                     b.Property<DateTime?>("LastPlayedDateUtc")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("LongestStreakDays")
-                        .HasColumnType("integer");
 
                     b.Property<int>("TotalGames")
                         .ValueGeneratedOnAdd()
