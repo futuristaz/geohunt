@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Services.Interfaces;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace psi25_project.Hubs
@@ -10,25 +13,58 @@ namespace psi25_project.Hubs
     public class GameHub : Hub
     {
         private readonly IMultiplayerGameService _gameService;
+        private readonly GeoHuntContext _context;
 
-        public GameHub(IMultiplayerGameService gameService)
+        public GameHub(IMultiplayerGameService gameService, GeoHuntContext context)
         {
             _gameService = gameService;
+            _context = context;
+        }
+
+        // --- Join Game Room (called when player connects to GameHub) ---
+        public async Task JoinGameRoom(string roomCode)
+        {
+            // Look up the room by its code
+            var room = await _context.Rooms
+                .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            
+            if (room == null)
+                throw new HubException("Room not found");
+
+            var roomId = room.Id;
+
+            // Add this connection to the room's SignalR group
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
+            
+            Console.WriteLine($"Player joined GameHub group: {roomId}");
         }
 
         // --- Start Game ---
-        public async Task StartGame(Guid roomId)
+        public async Task StartGame(string roomCode)
         {
+            // Look up the room by its code (not GUID)
+            var room = await _context.Rooms
+                .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            
+            if (room == null)
+                throw new HubException("Room not found");
+
+            var roomId = room.Id;
+
             // Start game only if all players are ready
             var gameDto = await _gameService.StartGameAsync(roomId);
 
-            // Add all connections in this room to a SignalR group
-            await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
+            Console.WriteLine($"Broadcasting GameStarted to group: {roomId}, gameId: {gameDto.GameId}");
+
+            // IMPORTANT: Notify ALL players that the game has started (for navigation)
+            await Clients.Group(roomId.ToString())
+                .SendAsync("GameStarted", gameDto.GameId.ToString());
 
             // Broadcast round start to all players in the room
             await Clients.Group(roomId.ToString())
                 .SendAsync("RoundStarted", new
                 {
+                    gameId = gameDto.GameId.ToString(),
                     gameDto.CurrentRound,
                     gameDto.TotalRounds,
                     gameDto.RoundLatitude,
@@ -39,6 +75,7 @@ namespace psi25_project.Hubs
             await Clients.Group(roomId.ToString())
                 .SendAsync("GameStateUpdated", gameDto);
         }
+
 
         // --- Submit Guess ---
         public async Task SubmitGuess(Guid playerId, double latitude, double longitude)
@@ -67,6 +104,7 @@ namespace psi25_project.Hubs
                     await Clients.Group(roomId.ToString())
                         .SendAsync("RoundStarted", new
                         {
+                            gameId = nextRound.GameId.ToString(),
                             nextRound.CurrentRound,
                             nextRound.TotalRounds,
                             nextRound.RoundLatitude,

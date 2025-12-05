@@ -18,6 +18,8 @@ export default function RoomLobby() {
   const [error, setError] = useState('');
   const [userId, setUserId] = useState('');
   const [myPlayerId, setMyPlayerId] = useState('');
+  const [roomHubConnected, setRoomHubConnected] = useState(false);
+  const [gameHubConnected, setGameHubConnected] = useState(false);
 
   const roomHubRef = useRef<signalR.HubConnection | null>(null);
   const gameHubRef = useRef<signalR.HubConnection | null>(null);
@@ -84,26 +86,50 @@ export default function RoomLobby() {
 
     roomHubRef.current = hub;
 
-    // events
+    // Connection state handlers
+    hub.onclose(() => {
+      console.log("RoomHub disconnected");
+      setRoomHubConnected(false);
+    });
+
+    hub.onreconnecting(() => {
+      console.log("RoomHub reconnecting...");
+      setRoomHubConnected(false);
+    });
+
+    hub.onreconnected(() => {
+      console.log("RoomHub reconnected");
+      setRoomHubConnected(true);
+    });
+
+    // Events
     hub.on("PlayerJoined", (player: Player) => {
+      console.log("Player joined:", player);
       setPlayers((prev) => [...prev, player]);
     });
 
     hub.on("PlayerLeft", (playerId: string) => {
+      console.log("Player left:", playerId);
       setPlayers((prev) => prev.filter((p) => p.id !== playerId));
     });
 
     hub.on("PlayerListUpdated", (list: Player[]) => {
+      console.log("Player list updated:", list);
       setPlayers(list);
     });
 
     hub.on("GameStarted", (gameId: string) => {
+      console.log("RoomHub: GameStarted received, navigating to:", gameId);
       navigate(`/multiplayer/${roomCode}/${gameId}`);
     });
 
     const start = async () => {
       try {
         await hub.start();
+        setRoomHubConnected(true);
+        console.log("Connected to RoomHub");
+
+        // Join room after connection is established
         const me = players.find((p) => p.id === myPlayerId);
         await hub.invoke(
           "JoinRoom",
@@ -111,19 +137,30 @@ export default function RoomLobby() {
           myPlayerId,
           me?.displayName ?? "Player"
         );
-        console.log("Connected to RoomHub");
+        console.log("Joined room successfully");
       } catch (err) {
         console.error("RoomHub connection error:", err);
+        setRoomHubConnected(false);
       }
     };
 
     start();
-  }, [roomCode, myPlayerId, players, navigate]);
+
+    // Cleanup only on unmount
+    return () => {
+      console.log("Cleaning up RoomHub connection");
+      if (hub.state === signalR.HubConnectionState.Connected) {
+        hub.invoke("LeaveRoom", roomCode).catch(console.error);
+      }
+      hub.stop();
+    };
+  }, [roomCode, myPlayerId]); // Remove players and navigate from dependencies
 
   // -----------------------------------------------------------
-  // 4. Create GameHub ONLY when needed
+  // 4. Connect to GameHub IMMEDIATELY
   // -----------------------------------------------------------
-  const ensureGameHub = async () => {
+  useEffect(() => {
+    if (!roomCode || !myPlayerId) return;
     if (gameHubRef.current) return;
 
     const hub = new signalR.HubConnectionBuilder()
@@ -131,25 +168,63 @@ export default function RoomLobby() {
       .withAutomaticReconnect()
       .build();
 
-    hub.on("RoundStarted", (data: { gameId: string }) => {
-      navigate(`/multiplayer/${roomCode}/${data.gameId}`);
-    });
-
     gameHubRef.current = hub;
 
-    try {
-      await hub.start();
-      console.log("Connected to GameHub");
-    } catch (err) {
-      console.error("GameHub error:", err);
-    }
-  };
+    // Connection state handlers
+    hub.onclose(() => {
+      console.log("GameHub disconnected");
+      setGameHubConnected(false);
+    });
+
+    hub.onreconnecting(() => {
+      console.log("GameHub reconnecting...");
+      setGameHubConnected(false);
+    });
+
+    hub.onreconnected(() => {
+      console.log("GameHub reconnected");
+      setGameHubConnected(true);
+    });
+
+    // Listen for game start event
+    hub.on("GameStarted", (gameId: string) => {
+      console.log("GameHub: GameStarted received, navigating to:", gameId);
+      navigate(`/multiplayer/${roomCode}/${gameId}`);
+    });
+
+    hub.on("RoundStarted", (data: any) => {
+      console.log("RoundStarted:", data);
+    });
+
+    const start = async () => {
+      try {
+        await hub.start();
+        setGameHubConnected(true);
+        console.log("Connected to GameHub");
+      } catch (err) {
+        console.error("GameHub error:", err);
+        setGameHubConnected(false);
+      }
+    };
+
+    start();
+
+    // Cleanup only on unmount
+    return () => {
+      console.log("Cleaning up GameHub connection");
+      hub.stop();
+    };
+  }, [roomCode, myPlayerId]); // Remove navigate from dependencies
 
   // -----------------------------------------------------------
   // TOGGLE READY
   // -----------------------------------------------------------
   const handleToggleReady = async () => {
     if (!myPlayerId) return;
+    if (!roomHubConnected) {
+      setError("Not connected to server. Please wait...");
+      return;
+    }
 
     try {
       const res = await fetch(`/api/Players/${myPlayerId}/toggle-ready`, {
@@ -180,11 +255,17 @@ export default function RoomLobby() {
   // START GAME
   // -----------------------------------------------------------
   const handleStartGame = async () => {
-    await ensureGameHub();
+    if (!gameHubConnected) {
+      setError("Not connected to game server. Please wait...");
+      return;
+    }
+
     try {
+      console.log("Starting game for room:", roomCode);
       await gameHubRef.current?.invoke("StartGame", roomCode);
     } catch (err) {
       console.error("StartGame failed:", err);
+      setError("Failed to start game");
     }
   };
 
@@ -198,7 +279,9 @@ export default function RoomLobby() {
         credentials: "include",
       });
 
-      await roomHubRef.current?.invoke("LeaveRoom", roomCode);
+      if (roomHubRef.current?.state === signalR.HubConnectionState.Connected) {
+        await roomHubRef.current?.invoke("LeaveRoom", roomCode);
+      }
     } catch (err) {
       console.error("Failed to leave room:", err);
     } finally {
@@ -208,8 +291,7 @@ export default function RoomLobby() {
     }
   };
 
-  const allReady =
-    players.length > 0 && players.every((p) => p.isReady);
+  const allReady = players.length > 0 && players.every((p) => p.isReady);
 
   if (loading) return <p className="text-white">Loading room...</p>;
   if (error) return <p className="text-red-400">{error}</p>;
@@ -217,6 +299,17 @@ export default function RoomLobby() {
   return (
     <main className="text-white flex flex-col items-center p-8">
       <h1 className="text-3xl font-bold mb-6">Room {roomCode}</h1>
+
+      {/* Connection Status */}
+      <div className="mb-4 text-sm">
+        <span className={roomHubConnected ? "text-green-400" : "text-yellow-400"}>
+          RoomHub: {roomHubConnected ? "Connected" : "Connecting..."}
+        </span>
+        {" | "}
+        <span className={gameHubConnected ? "text-green-400" : "text-yellow-400"}>
+          GameHub: {gameHubConnected ? "Connected" : "Connecting..."}
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {players.map((player) => (
@@ -236,7 +329,12 @@ export default function RoomLobby() {
       <div className="flex gap-4">
         <button
           onClick={handleToggleReady}
-          className="px-6 py-3 bg-green-600 rounded-xl hover:bg-green-700 transition"
+          disabled={!roomHubConnected}
+          className={`px-6 py-3 rounded-xl transition ${
+            roomHubConnected
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-gray-500 cursor-not-allowed"
+          }`}
         >
           {players.find((p) => p.id === myPlayerId)?.isReady
             ? "Unready"
@@ -245,9 +343,9 @@ export default function RoomLobby() {
 
         <button
           onClick={handleStartGame}
-          disabled={!allReady}
+          disabled={!allReady || !gameHubConnected}
           className={`px-6 py-3 rounded-xl transition ${
-            allReady
+            allReady && gameHubConnected
               ? "bg-blue-600 hover:bg-blue-700"
               : "bg-gray-500 cursor-not-allowed"
           }`}
