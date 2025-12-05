@@ -133,13 +133,13 @@ export default function RoundResultMap({
     <div className={className}>
       <div
         ref={mapRef}
-        className="w-full h-56 rounded-lg overflow-hidden border border-gray-200 bg-gray-100"
+        className="w-full h-56 rounded-lg overflow-hidden border border-slate-600 bg-slate-800"
         style={style}
         aria-label="Round map showing actual vs guess"
       />
-      <div className="text-xs text-gray-600 mt-2">
-        <span className="font-semibold text-green-600">Actual</span> ·{" "}
-        <span className="font-semibold text-orange-500">Your guess</span> · Distance:{" "}
+      <div className="text-xs text-blue-200 mt-2">
+        <span className="font-semibold text-green-400">Actual</span> ·{" "}
+        <span className="font-semibold text-orange-400">Your guess</span> · Distance:{" "}
         {distanceKm.toFixed(1)} km
       </div>
     </div>

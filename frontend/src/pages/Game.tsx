@@ -435,14 +435,14 @@ const StreetViewApp = () => {
 
       {postRoundSummary && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4 z-[12000]">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl p-6">
+          <div className="bg-linear-to-r from-slate-800 to-blue-900 rounded-2xl p-8 border-2 border-blue-500 shadow-2xl shadow-blue-900/50 w-full max-w-3xl">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <h2 className="text-xl font-semibold text-blue-900">
+              <h2 className="text-xl font-semibold text-blue-300">
                 Round {postRoundSummary.completedRound} summary
               </h2>
-              <div className="text-sm text-gray-600">
-                Score: <span className="font-semibold text-blue-700">{postRoundSummary.score}</span> · Distance:{' '}
-                <span className="font-semibold">{postRoundSummary.distanceKm.toFixed(1)} km</span>
+              <div className="text-sm text-blue-100">
+                Score: <span className="font-semibold text-green-400">{postRoundSummary.score}</span> · Distance:{' '}
+                <span className="font-semibold text-blue-200">{postRoundSummary.distanceKm.toFixed(1)} km</span>
               </div>
             </div>
 
@@ -454,7 +454,7 @@ const StreetViewApp = () => {
               />
             </div>
 
-            <div className="mt-4 text-sm text-gray-700">
+            <div className="mt-4 text-sm text-blue-200">
               <div>
                 Actual: {postRoundSummary.actual.lat.toFixed(5)}, {postRoundSummary.actual.lng.toFixed(5)}
               </div>
@@ -466,7 +466,7 @@ const StreetViewApp = () => {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={handleContinue}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                className="px-6 py-2.5 rounded-xl font-semibold bg-linear-to-r from-blue-500 to-sky-400 text-slate-950 shadow-lg shadow-blue-900/40 hover:from-blue-400 hover:to-sky-300 transition"
               >
                 {postRoundSummary.finished
                   ? 'See final results'

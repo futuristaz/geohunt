@@ -53,7 +53,6 @@ export default function MiniMap({
   const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const onSelectRef = useRef<typeof onSelect>(onSelect);
 
-  const [selected, setSelected] = useState<LatLngLiteral | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -96,7 +95,6 @@ export default function MiniMap({
             markerRef.current!.setPosition(position);
             markerRef.current!.setVisible(true);
 
-            setSelected(position);
             onSelectRef.current?.(position);
           }
         );
@@ -157,8 +155,7 @@ export default function MiniMap({
             markerRef.current!.setPosition(position);
             markerRef.current!.setVisible(true);
 
-            // Update state and call callback
-            setSelected(position);
+            // Call callback
             onSelectRef.current?.(position);
           }
         );

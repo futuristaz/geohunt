@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Home() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
 
   useEffect(() => {
     const checkLogin = async () => {
@@ -13,8 +12,7 @@ export default function Home() {
           credentials: 'include' // include cookies for authentication
         });
         if (res.ok) {
-          const data = await res.json();
-          setUsername(data.username);
+          // User is authenticated
         } else {
           navigate('/login', { replace: true });
         }
