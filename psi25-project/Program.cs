@@ -50,6 +50,8 @@ builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddSingleton<IRoomOnlineService, RoomOnlineService>();
+builder.Services.AddScoped<IMultiplayerGameRepository, MultiplayerGameRepository>();
+builder.Services.AddScoped<IMultiplayerGameService, MultiplayerGameService>();
 
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
 
@@ -157,6 +159,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapHub<RoomHub>("/roomHub");
+app.MapHub<GameHub>("/gameHub");
 
 app.MapFallbackToFile("/index.html");
 

@@ -52,5 +52,12 @@ namespace psi25_project.Repositories
                 .Include(r => r.Players)
                 .FirstOrDefaultAsync(r => r.Id == roomId);
         }
+
+        public async Task UpdateRoomAsync(Room room)
+        {
+            _context.Rooms.Update(room);
+            await _context.SaveChangesAsync();
+        }
+
     }
 }

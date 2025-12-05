@@ -14,10 +14,8 @@ namespace psi25_project.Models
 
         public DateTime? EndTime { get; set; } = null;
 
-        // Rooms generally don't need to persist current round — games do.
         public int TotalRounds { get; set; } = 1;
 
-        // renamed to singular for clarity
         public int CurrentRounds { get; set; } = 1;
 
         public List<Player> Players { get; set; } = new();
