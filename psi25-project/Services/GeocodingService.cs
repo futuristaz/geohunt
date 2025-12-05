@@ -34,7 +34,7 @@ namespace psi25_project.Services
                 // Use normalized cache key for both cache and in-flight tracking
                 var cacheKey = NormalizeAddressKey(address);
 
-                GeocodeResultDto coords;
+                GeocodeResultDto? coords;
 
                 // Check cache first
                 if (!_cache.TryGetValue(cacheKey, out coords))
