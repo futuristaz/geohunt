@@ -39,17 +39,14 @@ public class AchievementService : IAchievementService
     {
         // Load only relevant achievements
         var catalog = await _achievementRepository.GetActiveByCodesAsync(RoundSubmittedCodes);
-
-        // Get / create user stats
+        
         var stats = await _userStatsRepository.GetOrCreateAsync(userId);
-
-        // is this user's first guess overall
         var isFirstGuess = stats.TotalGuesses == 0;
-        stats.TotalGuesses += 1;
 
+        stats.TotalGuesses += 1;
         await _userStatsRepository.UpdateAsync(stats);
 
-        var toUnlockCodes = EvaluateRoundAchievements(stats, distanceKm, score);
+        var toUnlockCodes = EvaluateRoundAchievements(isFirstGuess, distanceKm, score);
 
         if (toUnlockCodes.Count == 0) return Array.Empty<UserAchievement>();
 
@@ -98,29 +95,10 @@ public class AchievementService : IAchievementService
     {
         // 1) Load relevant achievements
         var catalog = await _achievementRepository.GetActiveByCodesAsync(GameFinishedCodes);
-
-        // Get / create user stats
-        var stats = await _userStatsRepository.GetOrCreateAsync(userId);
-        stats.TotalGames += 1;
-        if (totalScore > stats.BestGameScore) stats.BestGameScore = totalScore;
-
-        var today = DateTime.UtcNow.Date;
-        var lastPlayed = stats.LastPlayedDateUtc?.Date;
-
-        if (lastPlayed == null) stats.CurrentStreakDays = 1;
-        else if (lastPlayed == today) { /* do nothing */ }
-        else if (lastPlayed == today.AddDays(-1)) stats.CurrentStreakDays += 1;
-        else stats.CurrentStreakDays = 1;
-
-        stats.LastPlayedDateUtc = DateTime.UtcNow;
-        if (stats.CurrentStreakDays > stats.LongestStreakDays) stats.LongestStreakDays = stats.CurrentStreakDays; 
-
-        await _userStatsRepository.UpdateAsync(stats);
-
-        // 2) Evaluate conditions
         var guesses = await _guessRepository.GetGuessesByGameAsync(gameId);
+        var stats = await UpdateStatsForGameAsync(userId, totalScore);
     
-        var toUnlockCodes = EvaluateGameAchievements(stats, totalScore, guesses, totalRounds);
+        var toUnlockCodes = EvaluateGameAchievements(stats, totalScore, guesses, totalRounds, DateTime.UtcNow);
 
         if (toUnlockCodes.Count == 0)
             return Array.Empty<UserAchievement>();
@@ -225,28 +203,89 @@ public class AchievementService : IAchievementService
         return dto;
     }
 
-    private static List<string> EvaluateRoundAchievements(UserStats stats, double distanceKm, int score)
+    private static List<string> EvaluateRoundAchievements(bool isFirstGuess, double distanceKm, int score)
     {
         var toUnlockCodes = new List<string>();
-        if (stats.TotalGuesses == 0) toUnlockCodes.Add(AchievementCodes.FirstGuess);
-        if (distanceKm <= 0.1) toUnlockCodes.Add(AchievementCodes.Bullseye100m);
-        if (distanceKm <= 1.0) toUnlockCodes.Add(AchievementCodes.Near1km);
+
+        if (isFirstGuess)
+            toUnlockCodes.Add(AchievementCodes.FirstGuess);
+        if (distanceKm <= 0.1)
+            toUnlockCodes.Add(AchievementCodes.Bullseye100m);
+        if (distanceKm <= 1.0)
+            toUnlockCodes.Add(AchievementCodes.Near1km);
 
         return toUnlockCodes;
     }
 
-    private static List<string> EvaluateGameAchievements(UserStats stats, int totalScore, IEnumerable<Guess> guesses, int totalRounds)
+    private static List<string> EvaluateGameAchievements(UserStats stats, int totalScore, IEnumerable<Guess> guesses, int totalRounds, DateTime currentTime)
     {
         var toUnlockCodes = new List<string>();
-        if (totalScore >= 10_000) toUnlockCodes.Add(AchievementCodes.Score10k);
+
+        if (totalScore >= 10_000)
+            toUnlockCodes.Add(AchievementCodes.Score10k);
+
         if (guesses.Count() == totalRounds && guesses.All(g => g.DistanceKm <= 1.0))
-        {
             toUnlockCodes.Add(AchievementCodes.CleanSweep);
-        }
-        if (stats.TotalGames == 100) toUnlockCodes.Add(AchievementCodes.TheMarathoner);
-        if (stats.CurrentStreakDays == 30) toUnlockCodes.Add(AchievementCodes.StreakMaster);
-        if (DateTime.UtcNow.Hour >= 0 && DateTime.UtcNow.Hour <= 6) toUnlockCodes.Add(AchievementCodes.LateNightPlayer);
+
+        if (stats.TotalGames == 100)
+            toUnlockCodes.Add(AchievementCodes.TheMarathoner);
+
+        if (stats.CurrentStreakDays == 30)
+            toUnlockCodes.Add(AchievementCodes.StreakMaster);
+
+        if (currentTime.Hour >= 0 && currentTime.Hour <= 6)
+            toUnlockCodes.Add(AchievementCodes.LateNightPlayer);
         
         return toUnlockCodes;
+    }
+
+    private async Task<UserStats> UpdateStatsForGameAsync(Guid userId, int totalScore)
+    {
+        // Get / create user stats
+        var stats = await _userStatsRepository.GetOrCreateAsync(userId);
+        var now = DateTime.UtcNow;
+
+        stats.TotalGames += 1;
+
+        if (totalScore > stats.BestGameScore)
+            stats.BestGameScore = totalScore;
+
+        var (newStreak, isNewLongest) = CalculateStreak(stats.LastPlayedDateUtc, stats.CurrentStreakDays, stats.LongestStreakDays, now);
+        
+        stats.CurrentStreakDays = newStreak;
+        stats.LastPlayedDateUtc = now;
+
+        if (isNewLongest)
+            stats.LongestStreakDays = newStreak;
+
+        await _userStatsRepository.UpdateAsync(stats);
+
+        return stats;
+    }
+
+    private static (int newStreak, bool isNewLongest) CalculateStreak(DateTime? lastPlayedDate, int currentStreak, int longestStreak, DateTime now)
+    {
+        var today = now.Date;
+        var lastPlayed = lastPlayedDate?.Date;
+
+        int newStreak;
+
+        if (lastPlayed == null)
+        {
+            newStreak = 1;
+        } else if (lastPlayed == today)
+        {
+            newStreak = currentStreak;
+        } else if (lastPlayed == today.AddDays(-1))
+        {
+            newStreak = currentStreak + 1;
+        } else
+        {
+            newStreak = 1;
+        }
+
+        bool isNewLongest = newStreak > longestStreak;
+
+        return (newStreak, isNewLongest);
     }
 }
