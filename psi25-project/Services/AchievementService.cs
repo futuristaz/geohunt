@@ -48,47 +48,7 @@ public class AchievementService : IAchievementService
 
         var toUnlockCodes = EvaluateRoundAchievements(isFirstGuess, distanceKm, score);
 
-        if (toUnlockCodes.Count == 0) return Array.Empty<UserAchievement>();
-
-        // map codes -> achievement ids
-        var targetAchievements = catalog
-            .Where(a => toUnlockCodes.Contains(a.Code))
-            .ToList();
-
-        if (targetAchievements.Count == 0) return Array.Empty<UserAchievement>();
-
-        // filter out already unlocked achievements
-        var alreadyUnlocked = await _achievementRepository.GetUnlockedAsync(
-            userId,
-            targetAchievements.Select(a => a.Id)
-        );
-
-        var alreadyIds = alreadyUnlocked
-            .Select(ua => ua.AchievementId)
-            .ToHashSet();
-
-        var newUnlocks = targetAchievements
-            .Where(a => !alreadyIds.Contains(a.Id))
-            .Select(a => new UserAchievement
-            {
-                UserId = userId,
-                AchievementId = a.Id,
-                // Achievement = a,
-                UnlockedAt = DateTime.UtcNow
-            })
-            .ToList();
-
-        if (newUnlocks.Count == 0)
-            return Array.Empty<UserAchievement>();
-
-        await _achievementRepository.AddNewlyUnlockedAchievementsAsync(newUnlocks);
-
-        var unlockedWithAchievements = await _achievementRepository.GetUnlockedAsync(
-            userId,
-            newUnlocks.Select(u => u.AchievementId)
-        );
-
-        return unlockedWithAchievements;
+        return await UnlockAchievementsAsync(userId, toUnlockCodes, catalog);
     }
 
     public async Task<IReadOnlyList<UserAchievement>> OnGameFinishedAsync(Guid userId, Guid gameId, int totalScore, int totalRounds)
@@ -100,49 +60,7 @@ public class AchievementService : IAchievementService
     
         var toUnlockCodes = EvaluateGameAchievements(stats, totalScore, guesses, totalRounds, DateTime.UtcNow);
 
-        if (toUnlockCodes.Count == 0)
-            return Array.Empty<UserAchievement>();
-
-        // 3) Map codes -> Achievement IDs
-        var targetAchievements = catalog
-            .Where(a => toUnlockCodes.Contains(a.Code))
-            .ToList();
-
-        if (targetAchievements.Count == 0)
-            return Array.Empty<UserAchievement>();
-
-        // 4) Filter out already unlocked
-        var alreadyUnlocked = await _achievementRepository.GetUnlockedAsync(
-            userId,
-            targetAchievements.Select(a => a.Id)
-        );
-
-        var alreadyIds = alreadyUnlocked
-            .Select(ua => ua.AchievementId)
-            .ToHashSet();
-
-        var newUnlocks = targetAchievements
-            .Where(a => !alreadyIds.Contains(a.Id))
-            .Select(a => new UserAchievement
-            {
-                UserId = userId,
-                AchievementId = a.Id,
-                // Achievement = a,
-                UnlockedAt = DateTime.UtcNow
-            })
-            .ToList();
-
-        if (newUnlocks.Count == 0)
-            return Array.Empty<UserAchievement>();
-
-        await _achievementRepository.AddNewlyUnlockedAchievementsAsync(newUnlocks);
-
-        var unlockedWithAchievements = await _achievementRepository.GetUnlockedAsync(
-            userId,
-            newUnlocks.Select(u => u.AchievementId)
-        );
-
-        return unlockedWithAchievements;
+        return await UnlockAchievementsAsync(userId, toUnlockCodes, catalog);
     }
 
     public async Task<List<AchievementDto>> GetActiveAchievementsAsync()
@@ -287,5 +205,43 @@ public class AchievementService : IAchievementService
         bool isNewLongest = newStreak > longestStreak;
 
         return (newStreak, isNewLongest);
+    }
+
+    private async Task<IReadOnlyList<UserAchievement>> UnlockAchievementsAsync(Guid userId, List<string> achievementCodes, IReadOnlyList<Achievement> catalog)
+    {
+        if (achievementCodes.Count == 0)
+            return Array.Empty<UserAchievement>();
+
+        var targetAchievements = catalog
+            .Where(a => achievementCodes.Contains(a.Code))
+            .ToList();
+
+        if (targetAchievements.Count == 0)
+            return Array.Empty<UserAchievement>();
+
+        var alreadyUnlocked = await _achievementRepository.GetUnlockedAsync(userId, targetAchievements.Select(a => a.Id));
+
+        var alreadyUnlockedIds = alreadyUnlocked
+            .Select(ua => ua.AchievementId)
+            .ToHashSet();
+
+        var newUnlocks = targetAchievements
+            .Where(a => !alreadyUnlockedIds.Contains(a.Id))
+            .Select(a => new UserAchievement
+            {
+                UserId = userId,
+                AchievementId = a.Id,
+                UnlockedAt = DateTime.UtcNow
+            })
+            .ToList();
+
+        if (newUnlocks.Count == 0)
+            return Array.Empty<UserAchievement>();
+
+        await _achievementRepository.AddNewlyUnlockedAchievementsAsync(newUnlocks);
+
+        var unlockedWithAchievements = await _achievementRepository.GetUnlockedAsync(userId, newUnlocks.Select(u => u.AchievementId));            
+
+        return unlockedWithAchievements;
     }
 }
