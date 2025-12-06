@@ -49,11 +49,7 @@ public class AchievementService : IAchievementService
 
         await _userStatsRepository.UpdateAsync(stats);
 
-        // decide which codes to unlock for this round
-        var toUnlockCodes = new List<string>();
-        if (isFirstGuess) toUnlockCodes.Add(AchievementCodes.FirstGuess);
-        if (distanceKm <= 0.1) toUnlockCodes.Add(AchievementCodes.Bullseye100m);
-        if (distanceKm <= 1.0) toUnlockCodes.Add(AchievementCodes.Near1km);
+        var toUnlockCodes = EvaluateRoundAchievements(stats, distanceKm, score);
 
         if (toUnlockCodes.Count == 0) return Array.Empty<UserAchievement>();
 
@@ -122,27 +118,9 @@ public class AchievementService : IAchievementService
         await _userStatsRepository.UpdateAsync(stats);
 
         // 2) Evaluate conditions
-        var toUnlockCodes = new List<string>();
-
-        // Score 10k
-        if (totalScore >= 10_000)
-            toUnlockCodes.Add(AchievementCodes.Score10k);
-
-        // Clean sweep: all guesses in this game within 1km
         var guesses = await _guessRepository.GetGuessesByGameAsync(gameId);
-        if (guesses.Count() == totalRounds && guesses.All(g => g.DistanceKm <= 1.0))
-        {
-            toUnlockCodes.Add(AchievementCodes.CleanSweep);
-        }
-
-        // The Marathoner
-        if (stats.TotalGames == 100) toUnlockCodes.Add(AchievementCodes.TheMarathoner);
-
-        // Streak Master
-        if (stats.CurrentStreakDays == 30) toUnlockCodes.Add(AchievementCodes.StreakMaster);
-
-        // Late Night Player
-        if (DateTime.UtcNow.Hour >= 0 && DateTime.UtcNow.Hour <= 6) toUnlockCodes.Add(AchievementCodes.LateNightPlayer);
+    
+        var toUnlockCodes = EvaluateGameAchievements(stats, totalScore, guesses, totalRounds);
 
         if (toUnlockCodes.Count == 0)
             return Array.Empty<UserAchievement>();
@@ -245,5 +223,30 @@ public class AchievementService : IAchievementService
         };
 
         return dto;
+    }
+
+    private static List<string> EvaluateRoundAchievements(UserStats stats, double distanceKm, int score)
+    {
+        var toUnlockCodes = new List<string>();
+        if (stats.TotalGuesses == 0) toUnlockCodes.Add(AchievementCodes.FirstGuess);
+        if (distanceKm <= 0.1) toUnlockCodes.Add(AchievementCodes.Bullseye100m);
+        if (distanceKm <= 1.0) toUnlockCodes.Add(AchievementCodes.Near1km);
+
+        return toUnlockCodes;
+    }
+
+    private static List<string> EvaluateGameAchievements(UserStats stats, int totalScore, IEnumerable<Guess> guesses, int totalRounds)
+    {
+        var toUnlockCodes = new List<string>();
+        if (totalScore >= 10_000) toUnlockCodes.Add(AchievementCodes.Score10k);
+        if (guesses.Count() == totalRounds && guesses.All(g => g.DistanceKm <= 1.0))
+        {
+            toUnlockCodes.Add(AchievementCodes.CleanSweep);
+        }
+        if (stats.TotalGames == 100) toUnlockCodes.Add(AchievementCodes.TheMarathoner);
+        if (stats.CurrentStreakDays == 30) toUnlockCodes.Add(AchievementCodes.StreakMaster);
+        if (DateTime.UtcNow.Hour >= 0 && DateTime.UtcNow.Hour <= 6) toUnlockCodes.Add(AchievementCodes.LateNightPlayer);
+        
+        return toUnlockCodes;
     }
 }
