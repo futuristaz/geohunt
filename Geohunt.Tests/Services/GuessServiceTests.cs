@@ -1,9 +1,9 @@
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client.Payloads;
 using Moq;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Services;
+using psi25_project.Services.Interfaces;
 
 namespace Geohunt.Tests.Services;
 
@@ -13,13 +13,15 @@ public class GuessServiceTests
     private readonly GuessService _service;
     private readonly Mock<IGameRepository> _mockGameRepository;
     private readonly Mock<ILocationRepository> _mockLocationRepository;
+    private readonly Mock<IAchievementService> _achievementService;
 
     public GuessServiceTests()
     {
         _mockGuessRepository = new Mock<IGuessRepository>();
         _mockGameRepository = new Mock<IGameRepository>();
         _mockLocationRepository = new Mock<ILocationRepository>();
-        _service = new GuessService(_mockGuessRepository.Object, _mockGameRepository.Object, _mockLocationRepository.Object);
+        _achievementService = new Mock<IAchievementService>();
+        _service = new GuessService(_mockGuessRepository.Object, _mockGameRepository.Object, _mockLocationRepository.Object, _achievementService.Object);
     }
 
     [Fact]
@@ -39,6 +41,7 @@ public class GuessServiceTests
         var game = new Game
         {
             Id = dto.GameId,
+            UserId = Guid.NewGuid(),
             User = null!,
             FinishedAt = null,
             CurrentRound = 1,
@@ -68,8 +71,17 @@ public class GuessServiceTests
         _mockGameRepository.Setup(r => r.UpdateAsync(It.IsAny<Game>()))
             .Returns(Task.CompletedTask);
 
+        _achievementService
+            .Setup(s => s.OnRoundSubmittedAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<int>()))
+            .ReturnsAsync(new List<UserAchievement>());
+
         // Act
-        var (guessDto, finished, currentRound, totalScore) = await _service.CreateGuessAsync(dto);
+        var (guessDto, finished, currentRound, totalScore, unlockedAchievements) = await _service.CreateGuessAsync(dto);
 
         // Assert – guess entity
         Assert.NotNull(capturedGuess);
@@ -99,7 +111,14 @@ public class GuessServiceTests
 
         _mockGuessRepository.Verify(r => r.AddAsync(It.IsAny<Guess>()), Times.Once);
         _mockGameRepository.Verify(r => r.UpdateAsync(game), Times.Once);
-    }
 
-    
+        _achievementService.Verify(
+            s => s.OnRoundSubmittedAsync(
+                game.UserId,
+                game.Id,
+                1, // roundNumber
+                dto.DistanceKm,
+                dto.Score),
+            Times.Once);
+    }
 }

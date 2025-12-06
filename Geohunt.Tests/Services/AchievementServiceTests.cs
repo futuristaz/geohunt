@@ -695,7 +695,7 @@ public class AchievementServiceTests
         _achievementRepo
             .SetupSequence(r => r.GetAchievementsForUserAsync(userId))
             // First call: repository returns null
-            .ReturnsAsync((List<UserAchievement>?)null)
+            .ReturnsAsync(new List<UserAchievement>())
             // Second call: repository returns empty list
             .ReturnsAsync(new List<UserAchievement>());
 
