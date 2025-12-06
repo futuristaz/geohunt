@@ -38,7 +38,7 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
         bottom-4
         left-1/2
         -translate-x-1/2
-        z-50
+        z-[13000]
         pointer-events-none
       "
     >
