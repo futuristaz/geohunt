@@ -7,6 +7,7 @@ import Signup from './pages/Signup'
 import Login from './pages/Login'
 import JoinRoom from './pages/JoinRoom';
 import RoomLobby from './pages/RoomLobby'
+import MultiplayerGame from './pages/MultiplayerGame'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/start" element={<Start />} />
       <Route path="/game" element={<Game />} />
+      <Route path="/multiplayer/:roomCode/:gameId" element={<MultiplayerGame />} />
       <Route path="/results/:gameId" element={<Results />} />
       <Route path="/results" element={<Results/>}/>
       <Route path="/signup" element={<Signup/>}/>

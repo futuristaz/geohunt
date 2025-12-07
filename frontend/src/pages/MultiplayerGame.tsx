@@ -3,29 +3,45 @@ import { useParams, useNavigate } from "react-router-dom";
 import * as signalR from "@microsoft/signalr";
 import MiniMap from "../components/MiniMap";
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 interface Coordinates {
   lat: number;
   lng: number;
 }
 
 interface RoundData {
-  roundNumber: number;
+  gameId: string;
+  currentRound: number;
   totalRounds: number;
-  latitude: number;
-  longitude: number;
-  panoId: string;
+  roundLatitude: number;
+  roundLongitude: number;
 }
 
-interface PlayerGuess {
+interface PlayerScore {
   playerId: string;
+  displayName: string;
+  score: number;
+  finished: boolean;
+}
+
+interface RoundResult {
+  playerId: string;
+  roundNumber: number;
   score: number;
   distanceMeters: number;
+  totalScore: number;
 }
 
 interface MultiplayerGameState {
   gameId: string;
   currentRound: number;
   totalRounds: number;
+  players: PlayerScore[];
 }
 
 export default function MultiplayerGame() {
@@ -35,20 +51,121 @@ export default function MultiplayerGame() {
   const streetViewRef = useRef<HTMLDivElement>(null);
   const panoRef = useRef<any>(null);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const isInitializedRef = useRef(false);
+  const pendingRoundDataRef = useRef<RoundData | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string>("");
+  const [myPlayerId, setMyPlayerId] = useState<string>("");
 
   const [roundData, setRoundData] = useState<RoundData | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<Coordinates | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const [gameState, setGameState] = useState<MultiplayerGameState | null>(null);
-  const [playersGuesses, setPlayersGuesses] = useState<PlayerGuess[]>([]);
+  const [waitingForOthers, setWaitingForOthers] = useState(false);
+  const [gameComplete, setGameComplete] = useState(false);
 
-  // --- initialize SignalR connection ---
+  // Fetch current user
   useEffect(() => {
-    if (!roomCode || !gameId) return;
+    const loadUser = async () => {
+      try {
+        const res = await fetch("/api/User/me", { credentials: "include" });
+        if (!res.ok) throw new Error("User not logged in");
+
+        const data = await res.json();
+        setUserId(data.id);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to fetch user");
+      }
+    };
+    loadUser();
+  }, []);
+
+  // Fetch player ID for this room
+  useEffect(() => {
+    if (!userId || !roomCode) return;
+
+    const loadPlayer = async () => {
+      try {
+        const res = await fetch(`/api/Rooms/${roomCode}/players`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to load player");
+
+        const players = await res.json();
+        const me = players.find((p: any) => p.userId === userId);
+        if (me) setMyPlayerId(me.id);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load player info");
+      }
+    };
+
+    loadPlayer();
+  }, [userId, roomCode]);
+
+  // Wait for Google Maps API
+  const waitGoogleMaps = () =>
+    new Promise<void>((resolve, reject) => {
+      const start = Date.now();
+      const tick = () => {
+        if (window.google?.maps) return resolve();
+        if (Date.now() - start > 15000)
+          return reject(new Error("Google Maps API not loaded"));
+        setTimeout(tick, 100);
+      };
+      tick();
+    });
+
+  // Initialize or update Street View panorama
+  const updateStreetView = async (lat: number, lng: number) => {
+    try {
+      await waitGoogleMaps();
+
+      // Wait for the DOM element to be ready
+      if (!streetViewRef.current) {
+        console.error("Street View container not ready");
+        throw new Error("Street View container not mounted");
+      }
+      
+      const position = { lat, lng };
+
+      if (!panoRef.current) {
+        console.log("Creating new Street View panorama");
+        panoRef.current = new window.google.maps.StreetViewPanorama(
+          streetViewRef.current,
+          {
+            position,
+            pov: { heading: 0, pitch: 0 },
+            zoom: 1,
+            addressControl: false,
+            fullscreenControl: false,
+            imageDateControl: false,
+            showRoadLabels: false,
+          }
+        );
+      } else {
+        console.log("Updating existing Street View panorama");
+        panoRef.current.setPosition(position);
+        panoRef.current.setPov({ heading: 0, pitch: 0 });
+        panoRef.current.setZoom(1);
+      }
+    } catch (err) {
+      console.error("Failed to update Street View:", err);
+      throw err;
+    }
+  };
+
+  // Initialize SignalR connection
+  useEffect(() => {
+    if (!roomCode || !gameId || !myPlayerId) return;
+    if (isInitializedRef.current) return;
+    
+    isInitializedRef.current = true;
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl("http://localhost:5041/gameHub", { withCredentials: true })
@@ -57,107 +174,317 @@ export default function MultiplayerGame() {
 
     connectionRef.current = connection;
 
-    // --- listen for round start ---
-    connection.on("RoundStarted", (data: RoundData & { currentRound: number; totalRounds: number }) => {
-      setRoundData(data);
-      setGameState({ gameId, currentRound: data.currentRound, totalRounds: data.totalRounds });
-      setSelectedCoords(null);
+    // Connection state handlers
+    connection.onclose(() => {
+      console.log("GameHub disconnected");
+    });
 
-      // Init/retarget StreetView
-      if (!panoRef.current) {
-        panoRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current!, {
-          position: { lat: data.latitude, lng: data.longitude },
-          pov: { heading: 0, pitch: 0 },
-          zoom: 1,
-          addressControl: false,
-          fullscreenControl: false,
-          imageDateControl: false,
-          showRoadLabels: false,
-        });
-      } else {
-        panoRef.current.setPosition({ lat: data.latitude, lng: data.longitude });
-        panoRef.current.setPov({ heading: 0, pitch: 0 });
-        panoRef.current.setZoom(1);
+    connection.onreconnecting(() => {
+      console.log("GameHub reconnecting...");
+    });
+
+    connection.onreconnected(async () => {
+      console.log("GameHub reconnected");
+      try {
+        await connection.invoke("JoinGame", roomCode, gameId);
+        console.log("Rejoined game after reconnection");
+      } catch (err) {
+        console.error("Failed to rejoin game:", err);
       }
+    });
 
+    // Listen for round start
+    connection.on("RoundStarted", async (data: RoundData) => {
+      console.log("RoundStarted:", data);
+      
+      // Reset state for new round
+      pendingRoundDataRef.current = data;
+      setRoundData(data);
+      setSelectedCoords(null);
+      setHasSubmitted(false);
+      setWaitingForOthers(false);
+      setLoading(true); // Show loading while Street View updates
+    });
+
+    // Listen for game state updates
+    connection.on("GameStateUpdated", (state: MultiplayerGameState) => {
+      console.log("GameStateUpdated:", state);
+      console.log("Current roundData:", roundData);
+      setGameState(state);
+    });
+
+    // Listen for round results
+    connection.on("RoundResult", (result: RoundResult) => {
+      console.log("RoundResult:", result);
+      
+      // Update the game state to reflect the player who finished
+      setGameState((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          players: prev.players.map((p) =>
+            p.playerId === result.playerId
+              ? { ...p, score: result.score, finished: true }
+              : p
+          ),
+        };
+      });
+    });
+
+    // Listen for game finished
+    connection.on("GameFinished", (finalState: MultiplayerGameState) => {
+      console.log("GameFinished:", finalState);
+      
+      // Update state with final scores and show completion message
+      setGameState(finalState);
+      setWaitingForOthers(false);
+      setGameComplete(true);
       setLoading(false);
-    });
-
-    // --- listen for guess results (optional for leaderboard) ---
-    connection.on("PlayerGuessed", (guess: PlayerGuess) => {
-      setPlayersGuesses((prev) => [...prev.filter(g => g.playerId !== guess.playerId), guess]);
-    });
-
-    // --- listen for game finished ---
-    connection.on("GameFinished", () => {
-      navigate(`/multiplayer/${roomCode}/results/${gameId}`);
+      
+      // Wait 3 seconds to show final scores, then go back to lobby
+      setTimeout(() => {
+        navigate(`/room/${roomCode}`);
+      }, 3000);
     });
 
     const startConnection = async () => {
       try {
         await connection.start();
-        console.log("Connected to GameHub");
+        console.log("Connected to GameHub for game");
 
-        // Notify hub that this player joined the game
+        // Join the game
         await connection.invoke("JoinGame", roomCode, gameId);
+        console.log("Joined game successfully");
       } catch (err) {
-        console.error(err);
+        console.error("GameHub connection error:", err);
         setError("Failed to connect to game server");
+        setLoading(false);
       }
     };
 
     startConnection();
 
     return () => {
+      console.log("Cleaning up GameHub connection");
       connection.stop();
     };
-  }, [roomCode, gameId, navigate]);
+  }, [roomCode, gameId, myPlayerId, navigate]);
+
+  // Separate effect to initialize Street View after DOM is ready
+  useEffect(() => {
+    if (!roundData) return;
+    
+    // Small delay to ensure DOM is fully rendered
+    const timer = setTimeout(async () => {
+      if (!streetViewRef.current) {
+        console.error("Street View container still not ready after delay");
+        setError("Failed to initialize Street View");
+        setLoading(false);
+        return;
+      }
+      
+      // If we have pending round data and the DOM is ready, initialize Street View
+      try {
+        console.log("Initializing Street View with coordinates:", {
+          lat: roundData.roundLatitude,
+          lng: roundData.roundLongitude
+        });
+        await updateStreetView(roundData.roundLatitude, roundData.roundLongitude);
+        setLoading(false);
+        pendingRoundDataRef.current = null;
+      } catch (err) {
+        console.error("Failed to load Street View:", err);
+        setError("Failed to load Street View location");
+        setLoading(false);
+      }
+    }, 100); // 100ms delay to ensure DOM is ready
+
+    return () => clearTimeout(timer);
+  }, [roundData]);
 
   const handleSubmitGuess = async () => {
-    if (!selectedCoords || !roundData || !connectionRef.current) return;
+    if (!selectedCoords || !roundData || !connectionRef.current || !myPlayerId) {
+      console.error("Missing required data for guess submission");
+      return;
+    }
 
     try {
       setSubmitting(true);
 
-      // Notify server with the guess
-      await connectionRef.current.invoke("SubmitGuess", gameId, selectedCoords);
+      // Submit guess to server
+      await connectionRef.current.invoke(
+        "SubmitGuess",
+        myPlayerId,
+        selectedCoords.lat,
+        selectedCoords.lng
+      );
 
+      console.log("Guess submitted successfully");
+      setHasSubmitted(true);
       setSelectedCoords(null);
+      
+      // Check if we're the last player to finish
+      if (gameState) {
+        const allFinished = gameState.players.every(p => 
+          p.playerId === myPlayerId || p.finished
+        );
+        
+        if (allFinished) {
+          // We're the last one - show brief waiting message
+          setWaitingForOthers(true);
+        } else {
+          // Others still playing - show waiting message
+          setWaitingForOthers(true);
+        }
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to submit guess:", err);
       setError("Failed to submit guess");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <p className="text-white">Loading round...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-  if (!roundData || !gameState) return null;
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <h2 className="text-red-600 text-xl font-bold mb-2">Error</h2>
+          <p className="text-gray-700">{error}</p>
+          <button
+            onClick={() => navigate(`/room/${roomCode}`)}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Back to Lobby
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen w-screen">
-      <div className="absolute top-3 left-3 z-50 rounded bg-black/60 text-white px-3 py-2 text-sm">
-        Round {roundData.roundNumber} / {roundData.totalRounds}
-      </div>
-
+      {/* Street View container - ALWAYS render this */}
       <div ref={streetViewRef} className="h-full w-full" />
 
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2" style={{ zIndex: 9999 }}>
-        <MiniMap
-          initialZoom={1}
-          onSelect={(coords) => setSelectedCoords(coords)}
-          className="overflow-hidden shadow-lg rounded-xl"
-          style={{ width: 300, height: 200 }}
-        />
-        <button
-          onClick={handleSubmitGuess}
-          disabled={!selectedCoords || submitting}
-          className="px-3 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {submitting ? "Submitting…" : selectedCoords ? "Submit Guess" : "Select a location on the map"}
-        </button>
-      </div>
+      {/* Loading overlay */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p className="text-white">Loading round...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Only show UI elements when we have data */}
+      {roundData && gameState && (
+        <>
+          {/* Round indicator */}
+          <div className="absolute top-3 left-3 z-50 rounded bg-black/60 text-white px-3 py-2 text-sm">
+            Round {roundData.currentRound} / {roundData.totalRounds}
+          </div>
+
+          {/* Player scores */}
+          <div className="absolute top-3 right-3 z-50 rounded bg-black/60 text-white px-3 py-2 text-sm max-w-xs">
+            <div className="font-bold mb-1">Players:</div>
+            {gameState.players.map((player) => (
+              <div key={player.playerId} className="flex justify-between gap-3">
+                <span className={player.playerId === myPlayerId ? "text-yellow-400" : ""}>
+                  {player.displayName}
+                </span>
+                <span>
+                  {player.score} pts {player.finished && "✅"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Game Complete overlay */}
+          {gameComplete && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50">
+              <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Game Complete!</h2>
+                <p className="text-gray-600 mb-6">Final Scores:</p>
+                <div className="space-y-2 mb-6">
+                  {gameState.players
+                    .sort((a, b) => b.score - a.score)
+                    .map((player, index) => (
+                      <div
+                        key={player.playerId}
+                        className={`flex items-center justify-between p-3 rounded ${
+                          index === 0 ? "bg-yellow-100" : "bg-gray-100"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          {index === 0 && "🏆"}
+                          <span className={player.playerId === myPlayerId ? "font-bold" : ""}>
+                            {player.displayName}
+                          </span>
+                        </span>
+                        <span className="font-bold">{player.score} pts</span>
+                      </div>
+                    ))}
+                </div>
+                <p className="text-sm text-gray-500">Returning to lobby...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Waiting overlay */}
+          {waitingForOthers && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-40">
+              <div className="bg-white p-6 rounded-xl shadow-lg text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-800 font-semibold">
+                  {gameState.players.every(p => p.finished)
+                    ? "All players finished! Moving to next round..."
+                    : "Waiting for other players..."}
+                </p>
+                <p className="text-gray-600 text-sm mt-2">
+                  {gameState.players.filter(p => p.finished).length} / {gameState.players.length} finished
+                </p>
+                <div className="mt-4 space-y-1">
+                  {gameState.players.map((player) => (
+                    <div key={player.playerId} className="text-sm flex items-center justify-between">
+                      <span className={player.playerId === myPlayerId ? "font-bold" : ""}>
+                        {player.displayName}
+                      </span>
+                      <span>
+                        {player.finished ? "✅" : "⏳"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mini map + submit */}
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2" style={{ zIndex: 9999 }}>
+            <MiniMap
+              initialZoom={1}
+              onSelect={(coords) => setSelectedCoords(coords)}
+              className="overflow-hidden shadow-lg rounded-xl"
+              style={{ width: 300, height: 200 }}
+            />
+            <button
+              onClick={handleSubmitGuess}
+              disabled={!selectedCoords || submitting || hasSubmitted}
+              className="px-3 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submitting
+                ? "Submitting…"
+                : hasSubmitted
+                ? "Submitted!"
+                : selectedCoords
+                ? "Submit Guess"
+                : "Select a location on the map"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

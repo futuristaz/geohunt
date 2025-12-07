@@ -217,8 +217,8 @@ namespace psi25_project.Services
         private static GeocodeResultDto GenerateRandomCoordinates()
         {
             // Use AddressProvider or random coordinates generator
-            var lat = 37.7749 + Random.Shared.NextDouble() * 0.1;
-            var lng = -122.4194 + Random.Shared.NextDouble() * 0.1;
+            var lat = 4.684954529774102;
+            var lng = -74.53974505304815;
             return new GeocodeResultDto { Lat = lat, Lng = lng };
         }
     }

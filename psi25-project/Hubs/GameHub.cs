@@ -21,10 +21,8 @@ namespace psi25_project.Hubs
             _context = context;
         }
 
-        // --- Join Game Room (called when player connects to GameHub) ---
         public async Task JoinGameRoom(string roomCode)
         {
-            // Look up the room by its code
             var room = await _context.Rooms
                 .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
             
@@ -33,16 +31,13 @@ namespace psi25_project.Hubs
 
             var roomId = room.Id;
 
-            // Add this connection to the room's SignalR group
             await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
             
             Console.WriteLine($"Player joined GameHub group: {roomId}");
         }
 
-        // --- Start Game ---
         public async Task StartGame(string roomCode)
         {
-            // Look up the room by its code (not GUID)
             var room = await _context.Rooms
                 .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
             
@@ -51,38 +46,32 @@ namespace psi25_project.Hubs
 
             var roomId = room.Id;
 
-            // Start game only if all players are ready
             var gameDto = await _gameService.StartGameAsync(roomId);
 
             Console.WriteLine($"Broadcasting GameStarted to group: {roomId}, gameId: {gameDto.GameId}");
 
-            // IMPORTANT: Notify ALL players that the game has started (for navigation)
             await Clients.Group(roomId.ToString())
                 .SendAsync("GameStarted", gameDto.GameId.ToString());
 
-            // Broadcast round start to all players in the room
             await Clients.Group(roomId.ToString())
                 .SendAsync("RoundStarted", new
                 {
                     gameId = gameDto.GameId.ToString(),
-                    gameDto.CurrentRound,
-                    gameDto.TotalRounds,
-                    gameDto.RoundLatitude,
-                    gameDto.RoundLongitude
+                    currentRound = gameDto.CurrentRound,
+                    totalRounds = gameDto.TotalRounds,   
+                    roundLatitude = gameDto.RoundLatitude,
+                    roundLongitude = gameDto.RoundLongitude
                 });
 
-            // Broadcast initial player scores
             await Clients.Group(roomId.ToString())
                 .SendAsync("GameStateUpdated", gameDto);
         }
 
 
-        // --- Submit Guess ---
         public async Task SubmitGuess(Guid playerId, double latitude, double longitude)
         {
             var result = await _gameService.SubmitGuessAsync(playerId, latitude, longitude);
 
-            // Send updated player round result to everyone in the room
             var player = await _gameService.GetCurrentGameForPlayerAsync(playerId);
             if (player == null) return;
 
@@ -91,24 +80,47 @@ namespace psi25_project.Hubs
             await Clients.Group(roomId.ToString())
                 .SendAsync("RoundResult", result);
 
-            // If all players finished the round, automatically start next round or end game
             var game = await _gameService.GetCurrentGameForRoomAsync(roomId);
             if (game == null) return;
 
+            var gameDto = new MultiplayerGameDto
+            {
+                GameId = game.Id,
+                RoomId = game.RoomId,
+                CurrentRound = game.CurrentRound,
+                TotalRounds = game.TotalRounds,
+                RoundLatitude = game.RoundLatitude,
+                RoundLongitude = game.RoundLongitude,
+                Players = game.Players.Select(p => new MultiplayerPlayerDto
+                {
+                    PlayerId = p.PlayerId,
+                    DisplayName = p.Player?.DisplayName ?? "Unknown",
+                    Score = p.Score,
+                    Finished = p.Finished,
+                    LastGuessLatitude = p.LastGuessLatitude,
+                    LastGuessLongitude = p.LastGuessLongitude,
+                    DistanceMeters = p.DistanceMeters
+                }).ToList()
+            };
+
+            await Clients.Group(roomId.ToString())
+                .SendAsync("GameStateUpdated", gameDto);
+
             if (game.Players.All(p => p.Finished))
             {
+                await Task.Delay(2000);
+
                 if (game.CurrentRound < game.TotalRounds)
                 {
-                    // Start next round
                     var nextRound = await _gameService.NextRoundAsync(game.Id);
                     await Clients.Group(roomId.ToString())
                         .SendAsync("RoundStarted", new
                         {
                             gameId = nextRound.GameId.ToString(),
-                            nextRound.CurrentRound,
-                            nextRound.TotalRounds,
-                            nextRound.RoundLatitude,
-                            nextRound.RoundLongitude
+                            currentRound = nextRound.CurrentRound,
+                            totalRounds = nextRound.TotalRounds,
+                            roundLatitude = nextRound.RoundLatitude,
+                            roundLongitude = nextRound.RoundLongitude
                         });
 
                     await Clients.Group(roomId.ToString())
@@ -116,20 +128,14 @@ namespace psi25_project.Hubs
                 }
                 else
                 {
-                    // End game
                     var finishedGame = await _gameService.EndGameAsync(game.Id);
+                    
                     await Clients.Group(roomId.ToString())
                         .SendAsync("GameFinished", finishedGame);
-
-                    // Optionally: send leaderboard for the lobby
-                    var pastGames = await _gameService.GetPastGamesForRoomAsync(roomId);
-                    await Clients.Group(roomId.ToString())
-                        .SendAsync("PastGamesUpdated", pastGames);
                 }
             }
         }
 
-        // --- Get current game state for a player ---
         public async Task GetCurrentGame(Guid roomId)
         {
             var game = await _gameService.GetCurrentGameForRoomAsync(roomId);
@@ -140,10 +146,61 @@ namespace psi25_project.Hubs
             await Clients.Caller.SendAsync("GameStateUpdated", game);
         }
 
-        // --- Optional: handle disconnect ---
+        public async Task JoinGame(string roomCode, string gameId)
+        {
+            var room = await _context.Rooms
+                .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            
+            if (room == null)
+                throw new HubException("Room not found");
+
+            var roomId = room.Id;
+            
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
+            
+            Console.WriteLine($"Player joined game: {gameId} in room: {roomCode}");
+            
+            var game = await _gameService.GetCurrentGameForRoomAsync(roomId);
+            if (game != null)
+            {
+                var gameDto = new MultiplayerGameDto
+                {
+                    GameId = game.Id,
+                    RoomId = game.RoomId,
+                    CurrentRound = game.CurrentRound,
+                    TotalRounds = game.TotalRounds,
+                    RoundLatitude = game.RoundLatitude,
+                    RoundLongitude = game.RoundLongitude,
+                    Players = game.Players.Select(p => new MultiplayerPlayerDto
+                    {
+                        PlayerId = p.PlayerId,
+                        DisplayName = p.Player?.DisplayName ?? "Unknown",
+                        Score = p.Score,
+                        Finished = p.Finished,
+                        LastGuessLatitude = p.LastGuessLatitude,
+                        LastGuessLongitude = p.LastGuessLongitude,
+                        DistanceMeters = p.DistanceMeters
+                    }).ToList()
+                };
+
+                await Clients.Caller.SendAsync("GameStateUpdated", gameDto);
+                
+                if (game.CurrentRound > 0 && game.RoundLatitude.HasValue && game.RoundLongitude.HasValue)
+                {
+                    await Clients.Caller.SendAsync("RoundStarted", new
+                    {
+                        gameId = game.Id.ToString(),
+                        currentRound = game.CurrentRound,
+                        totalRounds = game.TotalRounds,
+                        roundLatitude = game.RoundLatitude.Value,
+                        roundLongitude = game.RoundLongitude.Value
+                    });
+                }
+            }
+        }
+
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            // Could remove player from any ongoing games if needed
             await base.OnDisconnectedAsync(exception);
         }
     }

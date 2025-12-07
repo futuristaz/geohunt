@@ -124,7 +124,10 @@ builder.Services.AddControllers().AddJsonOptions(opts =>
 });
 
 // SignalR
-builder.Services.AddSignalR();
+builder.Services.AddSignalR().AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
 
 // ---------------- Build App ----------------
 var app = builder.Build();

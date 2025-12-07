@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as signalR from '@microsoft/signalr';
 
@@ -18,11 +18,22 @@ export default function RoomLobby() {
   const [error, setError] = useState('');
   const [userId, setUserId] = useState('');
   const [myPlayerId, setMyPlayerId] = useState('');
+  const [myDisplayName, setMyDisplayName] = useState('');
   const [roomHubConnected, setRoomHubConnected] = useState(false);
   const [gameHubConnected, setGameHubConnected] = useState(false);
 
   const roomHubRef = useRef<signalR.HubConnection | null>(null);
   const gameHubRef = useRef<signalR.HubConnection | null>(null);
+
+  // Track if we're navigating to game (to prevent cleanup)
+  const isNavigatingRef = useRef(false);
+
+  // Create stable navigation callback
+  const navigateToGame = useCallback((gameId: string) => {
+    console.log("Navigating to game:", gameId);
+    isNavigatingRef.current = true;
+    navigate(`/multiplayer/${roomCode}/${gameId}`);
+  }, [navigate, roomCode]);
 
   // -----------------------------------------------------------
   // 1. Fetch current user
@@ -62,7 +73,10 @@ export default function RoomLobby() {
         setPlayers(list);
 
         const me = list.find((p) => p.userId === userId);
-        if (me) setMyPlayerId(me.id);
+        if (me) {
+          setMyPlayerId(me.id);
+          setMyDisplayName(me.displayName);
+        }
       } catch (err) {
         console.error(err);
         setError("Failed to load players");
@@ -76,8 +90,10 @@ export default function RoomLobby() {
   // 3. Connect to RoomHub (only once)
   // -----------------------------------------------------------
   useEffect(() => {
-    if (!roomCode || !myPlayerId) return;
+    if (!roomCode || !myPlayerId || !myDisplayName) return;
     if (roomHubRef.current) return;
+
+    console.log("Setting up RoomHub connection...");
 
     const hub = new signalR.HubConnectionBuilder()
       .withUrl("http://localhost:5041/roomHub", { withCredentials: true })
@@ -97,20 +113,25 @@ export default function RoomLobby() {
       setRoomHubConnected(false);
     });
 
-    hub.onreconnected(() => {
+    hub.onreconnected(async () => {
       console.log("RoomHub reconnected");
       setRoomHubConnected(true);
+      // Rejoin room after reconnection
+      try {
+        await hub.invoke("JoinRoom", roomCode, myPlayerId, myDisplayName);
+        console.log("Rejoined room after reconnection");
+      } catch (err) {
+        console.error("Failed to rejoin room:", err);
+      }
     });
 
     // Events
-    hub.on("PlayerJoined", (player: Player) => {
-      console.log("Player joined:", player);
-      setPlayers((prev) => [...prev, player]);
+    hub.on("PlayerJoined", (displayName: string) => {
+      console.log("Player joined:", displayName);
     });
 
     hub.on("PlayerLeft", (playerId: string) => {
       console.log("Player left:", playerId);
-      setPlayers((prev) => prev.filter((p) => p.id !== playerId));
     });
 
     hub.on("PlayerListUpdated", (list: Player[]) => {
@@ -119,8 +140,8 @@ export default function RoomLobby() {
     });
 
     hub.on("GameStarted", (gameId: string) => {
-      console.log("RoomHub: GameStarted received, navigating to:", gameId);
-      navigate(`/multiplayer/${roomCode}/${gameId}`);
+      console.log("RoomHub: GameStarted received, gameId:", gameId);
+      navigateToGame(gameId);
     });
 
     const start = async () => {
@@ -130,13 +151,7 @@ export default function RoomLobby() {
         console.log("Connected to RoomHub");
 
         // Join room after connection is established
-        const me = players.find((p) => p.id === myPlayerId);
-        await hub.invoke(
-          "JoinRoom",
-          roomCode,
-          myPlayerId,
-          me?.displayName ?? "Player"
-        );
+        await hub.invoke("JoinRoom", roomCode, myPlayerId, myDisplayName);
         console.log("Joined room successfully");
       } catch (err) {
         console.error("RoomHub connection error:", err);
@@ -148,13 +163,26 @@ export default function RoomLobby() {
 
     // Cleanup only on unmount
     return () => {
-      console.log("Cleaning up RoomHub connection");
-      if (hub.state === signalR.HubConnectionState.Connected) {
-        hub.invoke("LeaveRoom", roomCode).catch(console.error);
+      // Don't cleanup if we're navigating to the game
+      if (isNavigatingRef.current) {
+        console.log("Skipping RoomHub cleanup - navigating to game");
+        return;
       }
-      hub.stop();
+      
+      console.log("Cleaning up RoomHub connection");
+      const cleanup = async () => {
+        if (hub.state === signalR.HubConnectionState.Connected) {
+          try {
+            await hub.invoke("LeaveRoom", roomCode);
+          } catch (err) {
+            console.error("Error leaving room:", err);
+          }
+        }
+        await hub.stop();
+      };
+      cleanup();
     };
-  }, [roomCode, myPlayerId]); // Remove players and navigate from dependencies
+  }, [roomCode, myPlayerId, myDisplayName, navigateToGame]); // Removed 'players' from dependencies!
 
   // -----------------------------------------------------------
   // 4. Connect to GameHub IMMEDIATELY
@@ -162,6 +190,8 @@ export default function RoomLobby() {
   useEffect(() => {
     if (!roomCode || !myPlayerId) return;
     if (gameHubRef.current) return;
+
+    console.log("Setting up GameHub connection...");
 
     const hub = new signalR.HubConnectionBuilder()
       .withUrl("http://localhost:5041/gameHub", { withCredentials: true })
@@ -181,15 +211,24 @@ export default function RoomLobby() {
       setGameHubConnected(false);
     });
 
-    hub.onreconnected(() => {
+    hub.onreconnected(async () => {
       console.log("GameHub reconnected");
       setGameHubConnected(true);
+      // Rejoin the game room after reconnection
+      if (roomCode) {
+        try {
+          await hub.invoke("JoinGameRoom", roomCode);
+          console.log("Rejoined GameHub room after reconnection");
+        } catch (err) {
+          console.error("Failed to rejoin game room:", err);
+        }
+      }
     });
 
     // Listen for game start event
     hub.on("GameStarted", (gameId: string) => {
-      console.log("GameHub: GameStarted received, navigating to:", gameId);
-      navigate(`/multiplayer/${roomCode}/${gameId}`);
+      console.log("GameHub: GameStarted received, gameId:", gameId);
+      navigateToGame(gameId);
     });
 
     hub.on("RoundStarted", (data: any) => {
@@ -201,6 +240,10 @@ export default function RoomLobby() {
         await hub.start();
         setGameHubConnected(true);
         console.log("Connected to GameHub");
+        
+        // Join the game room immediately after connection
+        await hub.invoke("JoinGameRoom", roomCode);
+        console.log("Joined GameHub room:", roomCode);
       } catch (err) {
         console.error("GameHub error:", err);
         setGameHubConnected(false);
@@ -211,10 +254,16 @@ export default function RoomLobby() {
 
     // Cleanup only on unmount
     return () => {
+      // Don't cleanup if we're navigating to the game
+      if (isNavigatingRef.current) {
+        console.log("Skipping GameHub cleanup - navigating to game");
+        return;
+      }
+      
       console.log("Cleaning up GameHub connection");
       hub.stop();
     };
-  }, [roomCode, myPlayerId]); // Remove navigate from dependencies
+  }, [roomCode, myPlayerId, navigateToGame]);
 
   // -----------------------------------------------------------
   // TOGGLE READY
@@ -235,10 +284,13 @@ export default function RoomLobby() {
       if (!res.ok) throw new Error("Failed to toggle ready");
 
       const updated: Player = await res.json();
+      
+      // Update local state immediately for better UX
       setPlayers((prev) =>
         prev.map((p) => (p.id === myPlayerId ? updated : p))
       );
 
+      // Notify server
       await roomHubRef.current?.invoke(
         "UpdateReadyState",
         roomCode,
@@ -263,6 +315,7 @@ export default function RoomLobby() {
     try {
       console.log("Starting game for room:", roomCode);
       await gameHubRef.current?.invoke("StartGame", roomCode);
+      console.log("StartGame invoked successfully");
     } catch (err) {
       console.error("StartGame failed:", err);
       setError("Failed to start game");
@@ -292,6 +345,7 @@ export default function RoomLobby() {
   };
 
   const allReady = players.length > 0 && players.every((p) => p.isReady);
+  const myPlayer = players.find((p) => p.id === myPlayerId);
 
   if (loading) return <p className="text-white">Loading room...</p>;
   if (error) return <p className="text-red-400">{error}</p>;
@@ -336,9 +390,7 @@ export default function RoomLobby() {
               : "bg-gray-500 cursor-not-allowed"
           }`}
         >
-          {players.find((p) => p.id === myPlayerId)?.isReady
-            ? "Unready"
-            : "Get Ready"}
+          {myPlayer?.isReady ? "Unready" : "Get Ready"}
         </button>
 
         <button
