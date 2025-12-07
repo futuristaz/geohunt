@@ -87,6 +87,33 @@ export default function RoomLobby() {
   }, [userId, roomCode]);
 
   // -----------------------------------------------------------
+// Reset navigating flag when component mounts (returning from game)
+// -----------------------------------------------------------
+useEffect(() => {
+  // Reset the navigating flag when we return to the lobby
+  isNavigatingRef.current = false;
+  
+  // Reload players to get updated ready states
+  if (userId && roomCode) {
+    const reloadPlayers = async () => {
+      try {
+        const res = await fetch(`/api/Rooms/${roomCode}/players`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const list: Player[] = await res.json();
+          setPlayers(list);
+        }
+      } catch (err) {
+        console.error("Failed to reload players:", err);
+      }
+    };
+    
+    reloadPlayers();
+  }
+}, [userId, roomCode]);
+
+  // -----------------------------------------------------------
   // 3. Connect to RoomHub (only once)
   // -----------------------------------------------------------
   useEffect(() => {

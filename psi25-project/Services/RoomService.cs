@@ -21,7 +21,6 @@ namespace psi25_project.Services
             _players = players;
         }
 
-        // Create a new room
         public async Task<RoomDto> CreateRoomAsync(RoomCreateDto dto)
         {
             var room = new Room
@@ -37,7 +36,6 @@ namespace psi25_project.Services
             return MapToRoomDto(createdRoom);
         }
 
-        // Join a room
         public async Task<PlayerDto?> JoinRoomAsync(JoinRoomDto dto)
         {
             var room = await _rooms.GetRoomByCodeAsync(dto.RoomCode);
@@ -60,14 +58,12 @@ namespace psi25_project.Services
             return MapToPlayerDto(player);
         }
 
-        // Get all players in a room
         public async Task<List<PlayerDto>> GetPlayersInRoomAsync(string roomCode)
         {
             var room = await _rooms.GetRoomWithPlayersAsync(roomCode);
             return room?.Players.Select(MapToPlayerDto).ToList() ?? new List<PlayerDto>();
         }
 
-        // Mark player as ready
         public async Task<PlayerDto?> SetReadyAsync(Guid playerId)
         {
             var player = await _players.GetPlayerByIdAsync(playerId);
@@ -79,7 +75,6 @@ namespace psi25_project.Services
             return MapToPlayerDto(player);
         }
 
-        // Toggle ready/unready
         public async Task<PlayerDto?> ToggleReadyAsync(Guid playerId)
         {
             var player = await _players.GetPlayerByIdAsync(playerId);
@@ -91,7 +86,6 @@ namespace psi25_project.Services
             return MapToPlayerDto(player);
         }
 
-        // Leave room
         public async Task<bool> LeaveRoomAsync(Guid playerId)
         {
             var player = await _players.GetPlayerByIdAsync(playerId);
@@ -110,7 +104,6 @@ namespace psi25_project.Services
             return true;
         }
 
-        // --- Helpers ---
         private string GenerateCode() => Guid.NewGuid().ToString("N")[..5].ToUpper();
 
         private RoomDto MapToRoomDto(Room room) => new RoomDto

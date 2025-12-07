@@ -26,7 +26,6 @@ namespace psi25_project.Services
             _roomRepository = roomRepository;
         }
 
-        // --- Start Game ---
         public async Task<MultiplayerGameDto> StartGameAsync(Guid roomId)
         {
             var room = await _roomRepository.GetRoomByIdAsync(roomId);
@@ -35,7 +34,6 @@ namespace psi25_project.Services
             if (!room.Players.All(p => p.IsReady))
                 throw new InvalidOperationException("Not all players are ready");
 
-            // Pick random coordinates (can be extended to use a real Geocoding service)
             var coords = GenerateRandomCoordinates();
 
             var game = new MultiplayerGame
@@ -67,7 +65,6 @@ namespace psi25_project.Services
             return MapToDto(game);
         }
 
-        // --- Submit Guess ---
         public async Task<RoundResultDto> SubmitGuessAsync(Guid playerId, double latitude, double longitude)
         {
             var player = await _playerRepository.GetPlayerByIdAsync(playerId);
@@ -146,6 +143,12 @@ namespace psi25_project.Services
             if (room != null)
             {
                 room.Status = RoomStatus.Lobby;
+                
+                foreach (var player in room.Players)
+                {
+                    player.IsReady = false;
+                }
+                
                 await _roomRepository.UpdateRoomAsync(room);
             }
 
@@ -216,7 +219,6 @@ namespace psi25_project.Services
 
         private static GeocodeResultDto GenerateRandomCoordinates()
         {
-            // Use AddressProvider or random coordinates generator
             var lat = 4.684954529774102;
             var lng = -74.53974505304815;
             return new GeocodeResultDto { Lat = lat, Lng = lng };

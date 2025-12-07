@@ -68,21 +68,26 @@ namespace psi25_project.Hubs
         }
 
 
+        // --- Submit Guess ---
         public async Task SubmitGuess(Guid playerId, double latitude, double longitude)
         {
             var result = await _gameService.SubmitGuessAsync(playerId, latitude, longitude);
 
+            // Send updated player round result to everyone in the room
             var player = await _gameService.GetCurrentGameForPlayerAsync(playerId);
             if (player == null) return;
 
             var roomId = player.Game.RoomId;
 
+            // Broadcast the result to all players
             await Clients.Group(roomId.ToString())
                 .SendAsync("RoundResult", result);
 
+            // Get updated game state
             var game = await _gameService.GetCurrentGameForRoomAsync(roomId);
             if (game == null) return;
 
+            // Broadcast updated game state so all players see who finished
             var gameDto = new MultiplayerGameDto
             {
                 GameId = game.Id,
@@ -106,13 +111,28 @@ namespace psi25_project.Hubs
             await Clients.Group(roomId.ToString())
                 .SendAsync("GameStateUpdated", gameDto);
 
-            if (game.Players.All(p => p.Finished))
+            // Check if all players finished the round
+            var allFinished = game.Players.All(p => p.Finished);
+            
+            if (allFinished)
             {
+                Console.WriteLine("All players finished the round!");
+                
+                // Small delay so players can see the results
                 await Task.Delay(2000);
 
                 if (game.CurrentRound < game.TotalRounds)
                 {
+                    Console.WriteLine($"Starting next round {game.CurrentRound + 1}");
+                    
+                    // Start next round
                     var nextRound = await _gameService.NextRoundAsync(game.Id);
+                    
+                    // ✅ IMPORTANT: Send GameStateUpdated FIRST (with finished = false)
+                    await Clients.Group(roomId.ToString())
+                        .SendAsync("GameStateUpdated", nextRound);
+                    
+                    // Then send RoundStarted
                     await Clients.Group(roomId.ToString())
                         .SendAsync("RoundStarted", new
                         {
@@ -122,12 +142,14 @@ namespace psi25_project.Hubs
                             roundLatitude = nextRound.RoundLatitude,
                             roundLongitude = nextRound.RoundLongitude
                         });
-
-                    await Clients.Group(roomId.ToString())
-                        .SendAsync("GameStateUpdated", nextRound);
+                    
+                    Console.WriteLine($"✅ Round {nextRound.CurrentRound} started successfully");
                 }
                 else
                 {
+                    Console.WriteLine("All rounds completed - ending game");
+                    
+                    // All rounds completed - end game
                     var finishedGame = await _gameService.EndGameAsync(game.Id);
                     
                     await Clients.Group(roomId.ToString())
@@ -135,7 +157,6 @@ namespace psi25_project.Hubs
                 }
             }
         }
-
         public async Task GetCurrentGame(Guid roomId)
         {
             var game = await _gameService.GetCurrentGameForRoomAsync(roomId);

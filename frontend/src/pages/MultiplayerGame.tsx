@@ -195,15 +195,34 @@ export default function MultiplayerGame() {
 
     // Listen for round start
     connection.on("RoundStarted", async (data: RoundData) => {
-      console.log("RoundStarted:", data);
+      console.log("🎮 RoundStarted received:", data);
+      console.log("📍 Previous round:", roundData?.currentRound, "→ New round:", data.currentRound);
       
-      // Reset state for new round
+      // Reset ALL state for new round
       pendingRoundDataRef.current = data;
       setRoundData(data);
       setSelectedCoords(null);
       setHasSubmitted(false);
-      setWaitingForOthers(false);
+      setWaitingForOthers(false); // ✅ CRITICAL: Hide waiting overlay
+      setGameComplete(false);
       setLoading(true); // Show loading while Street View updates
+      
+      console.log("✅ State reset for new round");
+      
+      // IMPORTANT: Reset all players' finished status for the new round
+      setGameState((prev) => {
+        if (!prev) return prev;
+        const newState = {
+          ...prev,
+          currentRound: data.currentRound,
+          players: prev.players.map((p) => ({
+            ...p,
+            finished: false, // Reset finished status for new round
+          })),
+        };
+        console.log("🔄 Updated game state:", newState);
+        return newState;
+      });
     });
 
     // Listen for game state updates
@@ -211,6 +230,12 @@ export default function MultiplayerGame() {
       console.log("GameStateUpdated:", state);
       console.log("Current roundData:", roundData);
       setGameState(state);
+      
+      // ✅ If this is a state update for a new round (all finished = false), hide waiting overlay
+      if (state.players.every(p => !p.finished)) {
+        console.log("New round detected - all players not finished yet");
+        setWaitingForOthers(false);
+      }
     });
 
     // Listen for round results
@@ -241,8 +266,12 @@ export default function MultiplayerGame() {
       setGameComplete(true);
       setLoading(false);
       
-      // Wait 3 seconds to show final scores, then go back to lobby
-      setTimeout(() => {
+      // Disconnect from the game hub before navigating
+      setTimeout(async () => {
+        if (connectionRef.current) {
+          await connectionRef.current.stop();
+          connectionRef.current = null;
+        }
         navigate(`/room/${roomCode}`);
       }, 3000);
     });
@@ -323,20 +352,8 @@ export default function MultiplayerGame() {
       setHasSubmitted(true);
       setSelectedCoords(null);
       
-      // Check if we're the last player to finish
-      if (gameState) {
-        const allFinished = gameState.players.every(p => 
-          p.playerId === myPlayerId || p.finished
-        );
-        
-        if (allFinished) {
-          // We're the last one - show brief waiting message
-          setWaitingForOthers(true);
-        } else {
-          // Others still playing - show waiting message
-          setWaitingForOthers(true);
-        }
-      }
+      // Always show waiting overlay after submitting
+      setWaitingForOthers(true);
     } catch (err) {
       console.error("Failed to submit guess:", err);
       setError("Failed to submit guess");
@@ -402,19 +419,20 @@ export default function MultiplayerGame() {
 
           {/* Game Complete overlay */}
           {gameComplete && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50">
-              <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-50">
+              <div className="bg-white/10 border border-white/20 text-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center">
                 <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Game Complete!</h2>
-                <p className="text-gray-600 mb-6">Final Scores:</p>
+                <h2 className="text-3xl font-bold mb-2">Game Complete!</h2>
+                <p className="text-white/80 mb-6">Final Scores</p>
+
                 <div className="space-y-2 mb-6">
                   {gameState.players
                     .sort((a, b) => b.score - a.score)
                     .map((player, index) => (
                       <div
                         key={player.playerId}
-                        className={`flex items-center justify-between p-3 rounded ${
-                          index === 0 ? "bg-yellow-100" : "bg-gray-100"
+                        className={`flex items-center justify-between p-3 rounded-xl ${
+                          index === 0 ? "bg-yellow-500/20 border border-yellow-400/30" : "bg-white/10 border border-white/10"
                         }`}
                       >
                         <span className="flex items-center gap-2">
@@ -427,39 +445,45 @@ export default function MultiplayerGame() {
                       </div>
                     ))}
                 </div>
-                <p className="text-sm text-gray-500">Returning to lobby...</p>
+
+                <p className="text-sm text-white/60">Returning to lobby...</p>
               </div>
             </div>
           )}
 
+
           {/* Waiting overlay */}
           {waitingForOthers && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-40">
-              <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-800 font-semibold">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-40">
+              <div className="bg-white/10 border border-white/20 text-white p-6 rounded-2xl shadow-xl text-center max-w-sm w-full">
+                
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+
+                <p className="font-semibold text-lg">
                   {gameState.players.every(p => p.finished)
-                    ? "All players finished! Moving to next round..."
-                    : "Waiting for other players..."}
+                    ? "All players finished! Loading next round..."
+                    : "Waiting for other players…"}
                 </p>
-                <p className="text-gray-600 text-sm mt-2">
+
+                <p className="text-white/70 text-sm mt-2">
                   {gameState.players.filter(p => p.finished).length} / {gameState.players.length} finished
                 </p>
+
                 <div className="mt-4 space-y-1">
                   {gameState.players.map((player) => (
                     <div key={player.playerId} className="text-sm flex items-center justify-between">
-                      <span className={player.playerId === myPlayerId ? "font-bold" : ""}>
+                      <span className={player.playerId === myPlayerId ? "font-bold text-blue-300" : ""}>
                         {player.displayName}
                       </span>
-                      <span>
-                        {player.finished ? "✅" : "⏳"}
-                      </span>
+                      <span>{player.finished ? "✅" : "⏳"}</span>
                     </div>
                   ))}
                 </div>
+
               </div>
             </div>
           )}
+
 
           {/* Mini map + submit */}
           <div className="absolute bottom-4 right-4 flex flex-col gap-2" style={{ zIndex: 9999 }}>

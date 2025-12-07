@@ -8,7 +8,6 @@ export default function JoinRoom() {
   const [error, setError] = useState('');
 
   const [joinRoomCode, setJoinRoomCode] = useState('');
-  const [createRounds, setCreateRounds] = useState(1);
 
   const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
 
@@ -64,7 +63,7 @@ export default function JoinRoom() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ totalRounds: createRounds })
+        body: JSON.stringify({ totalRounds: 1 }) // ← fixed to 1
       });
       if (!res.ok) throw new Error('Failed to create room');
       const room = await res.json();
@@ -97,19 +96,16 @@ export default function JoinRoom() {
         <button
           onClick={() => setActiveTab('join')}
           className={`px-6 py-3 rounded-xl font-semibold ${
-            activeTab === 'join'
-              ? 'bg-blue-600'
-              : 'bg-white/10 hover:bg-white/20'
+            activeTab === 'join' ? 'bg-blue-600' : 'bg-white/10 hover:bg-white/20'
           }`}
         >
           Join Room
         </button>
+
         <button
           onClick={() => setActiveTab('create')}
           className={`px-6 py-3 rounded-xl font-semibold ${
-            activeTab === 'create'
-              ? 'bg-green-600'
-              : 'bg-white/10 hover:bg-white/20'
+            activeTab === 'create' ? 'bg-green-600' : 'bg-white/10 hover:bg-white/20'
           }`}
         >
           Create Room
@@ -126,6 +122,7 @@ export default function JoinRoom() {
               placeholder="Enter Room Code"
               className="px-4 py-3 rounded-xl bg-white/10 border border-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+
             <input
               type="text"
               value={displayName}
@@ -133,6 +130,7 @@ export default function JoinRoom() {
               placeholder="Your Name"
               className="px-4 py-3 rounded-xl bg-white/10 border border-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+
             <button
               onClick={handleJoinRoom}
               className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow hover:bg-blue-700 transition"
@@ -144,14 +142,7 @@ export default function JoinRoom() {
 
         {activeTab === 'create' && (
           <>
-            <input
-              type="number"
-              value={createRounds}
-              onChange={(e) => setCreateRounds(Number(e.target.value))}
-              min={1}
-              placeholder="Number of Rounds"
-              className="px-4 py-3 rounded-xl bg-white/10 border border-white focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+            {/* Rounds input removed */}
             <input
               type="text"
               value={displayName}
@@ -159,6 +150,7 @@ export default function JoinRoom() {
               placeholder="Your Name"
               className="px-4 py-3 rounded-xl bg-white/10 border border-white focus:outline-none focus:ring-2 focus:ring-green-500"
             />
+
             <button
               onClick={handleCreateRoom}
               className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
