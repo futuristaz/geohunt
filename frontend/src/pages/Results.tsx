@@ -1,6 +1,7 @@
 // src/pages/Results.tsx
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import RoundResultMap from "../components/RoundResultMap";
 
 type ResultsState = {
   gameId: string;
@@ -188,37 +189,51 @@ export default function Results() {
                 key={result.id ?? index}
                 className="rounded-xl bg-slate-900/60 border border-slate-700 px-4 py-3"
               >
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-semibold text-blue-100">
-                    Round {index + 1}
-                  </h3>
-                  <span className="text-xs bg-slate-800/80 px-2 py-1 rounded-full text-blue-200">
-                    {result.distanceKm.toFixed(2)} km away
-                  </span>
-                </div>
-                <div className="text-sm text-blue-100 space-y-1">
-                  <div>
-                    Score:{" "}
-                    <span className="font-semibold text-green-400">
-                      {result.score}
-                    </span>{" "}
-                    pts
+                <div className="flex gap-4">
+                  {/* Left side - Text data */}
+                  <div className="flex-shrink-0 flex-1">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-sm font-semibold text-blue-100">
+                        Round {index + 1}
+                      </h3>
+                      <span className="text-xs bg-slate-800/80 px-2 py-1 rounded-full text-blue-200">
+                        {result.distanceKm.toFixed(2)} km away
+                      </span>
+                    </div>
+                    <div className="text-sm text-blue-100 space-y-1">
+                      <div>
+                        Score:{" "}
+                        <span className="font-semibold text-green-400">
+                          {result.score}
+                        </span>{" "}
+                        pts
+                      </div>
+                      <div className="text-xs text-blue-200 mt-1">
+                        <div>
+                          Actual:{" "}
+                          <span className="font-mono">
+                            {result.actualLatitude.toFixed(5)},{" "}
+                            {result.actualLongitude.toFixed(5)}
+                          </span>
+                        </div>
+                        <div>
+                          Your guess:{" "}
+                          <span className="font-mono">
+                            {result.guessedLatitude.toFixed(5)},{" "}
+                            {result.guessedLongitude.toFixed(5)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-blue-200 mt-1">
-                    <div>
-                      Actual:{" "}
-                      <span className="font-mono">
-                        {result.actualLatitude.toFixed(5)},{" "}
-                        {result.actualLongitude.toFixed(5)}
-                      </span>
-                    </div>
-                    <div>
-                      Your guess:{" "}
-                      <span className="font-mono">
-                        {result.guessedLatitude.toFixed(5)},{" "}
-                        {result.guessedLongitude.toFixed(5)}
-                      </span>
-                    </div>
+
+                  {/* Right side - Map */}
+                  <div className="flex-1">
+                    <RoundResultMap
+                      actual={{ lat: result.actualLatitude, lng: result.actualLongitude }}
+                      guess={{ lat: result.guessedLatitude, lng: result.guessedLongitude }}
+                      distanceKm={result.distanceKm}
+                    />
                   </div>
                 </div>
               </div>

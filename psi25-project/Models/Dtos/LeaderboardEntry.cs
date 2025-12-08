@@ -6,7 +6,7 @@ namespace psi25_project.Models.Dtos
     {
         public int Id { get; set; }
         public Guid UserId { get; set; }
-        public string Username { get; set; }
+        public string? Username { get; set; }
         public double DistanceKm { get; set; }
         public DateTime GuessedAt { get; set; }
         public int TotalScore { get; set; }

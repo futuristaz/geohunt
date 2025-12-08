@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Home() {
   const navigate = useNavigate();
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
-  const [username, setUsername] = useState('');
 
   useEffect(() => {
     const checkLogin = async () => {
@@ -14,16 +12,12 @@ export default function Home() {
           credentials: 'include' // include cookies for authentication
         });
         if (res.ok) {
-          const data = await res.json();
-          setLoggedIn(true);
-          setUsername(data.username);
+          // User is authenticated
         } else {
-          setLoggedIn(false);
           navigate('/login', { replace: true });
         }
       } catch (error) {
         console.error('Error checking login status:', error);
-        setLoggedIn(false);
         navigate('/login', { replace: true });
       }
     };

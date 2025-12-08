@@ -8,6 +8,7 @@ declare global {
 import { useEffect, useRef, useState } from 'react';
 import MiniMap from '../components/MiniMap';
 import { useNavigate, useLocation } from 'react-router-dom';
+import RoundResultMap from '../components/RoundResultMap';
 import { AchievementPopup } from '../components/AchievementPopup';
 import type { AchievementDisplay, UserAchievementApi } from '../types/achievements';
 
@@ -61,6 +62,20 @@ const StreetViewApp = () => {
   const [round, setRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number>(3);
   const [submitting, setSubmitting] = useState(false);
+  const [postRoundSummary, setPostRoundSummary] = useState<{
+    completedRound: number;
+    score: number;
+    distanceKm: number;
+    actual: Coordinates;
+    guess: Coordinates;
+    finished: boolean;
+    nextRound: number;
+    totalScore: number;
+  } | null>(null);
+  const [pendingNextLocation, setPendingNextLocation] = useState<{
+    position: Coordinates;
+    locationId: number;
+  } | null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -118,20 +133,7 @@ const StreetViewApp = () => {
     });
 
   // ---- load a new location: fetch coords, init/retarget pano, persist Location ----
-  const loadRoundLocation = async () => {
-    // 1) Fetch coordinates for this round
-    const coordsRes = await fetch('/api/geocoding/valid_coords');
-    await handleApiError(coordsRes, 'load Street View');
-    const coordsData: GeocodingApiResponse = await coordsRes.json();
-
-    const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
-    const lng = parseFloat(String(coordsData.modifiedCoordinates.lng));
-    if (Number.isNaN(lat) || Number.isNaN(lng)) {
-      throw new Error('Invalid coordinates received from API');
-    }
-    const position: Coordinates = { lat, lng };
-
-    // 2) Init/retarget Street View
+  const applyLocationToPano = (position: Coordinates, locId: number) => {
     if (!panoRef.current) {
       panoRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current!, {
         position,
@@ -148,7 +150,23 @@ const StreetViewApp = () => {
       panoRef.current.setZoom(1);
     }
 
-    // 3) Persist Location for this round
+    setInitialCoords(position);
+    setLocationId(locId);
+    setSelectedCoords(null);
+  };
+
+  const fetchAndPersistLocation = async () => {
+    const coordsRes = await fetch('/api/geocoding/valid_coords');
+    await handleApiError(coordsRes, 'load Street View');
+    const coordsData: GeocodingApiResponse = await coordsRes.json();
+
+    const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
+    const lng = parseFloat(String(coordsData.modifiedCoordinates.lng));
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      throw new Error('Invalid coordinates received from API');
+    }
+    const position: Coordinates = { lat, lng };
+
     const locRes = await fetch('/api/Locations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -157,10 +175,12 @@ const StreetViewApp = () => {
     await handleApiError(locRes, 'save location');
     const locData = await locRes.json();
 
-    // 4) Update UI state
-    setInitialCoords(position);
-    setLocationId(locData.id);
-    setSelectedCoords(null);
+    return { position, locationId: locData.id };
+  };
+
+  const loadRoundLocation = async () => {
+    const { position, locationId: locId } = await fetchAndPersistLocation();
+    applyLocationToPano(position, locId);
   };
 
   // ---- initial mount: wait for maps, mount pano and first round location ----
@@ -198,6 +218,7 @@ const StreetViewApp = () => {
 
     try {
       setSubmitting(true);
+      const completedRound = round;
 
       // A) score this guess
       const resultResponse = await fetch('/api/result', {
@@ -238,24 +259,32 @@ const StreetViewApp = () => {
         setAchievementQueue((prev) => [...prev, ...newDisplayItems]);
       }
 
-      if (guessData.finished) {
-        if (guessData.achievementsUnlocked.length === 0) {
-          // No achievements to show → just go to results immediately
-          navigate(`/results/${gameId}`, {
-            state: { gameId },
-            replace: true,
-          });
-        } else {
-          // Achievements were unlocked → remember that we should navigate
-          // later, after the popups have been shown
-          setFinishedGamePending(true);
-        }
-        return;
+      setPostRoundSummary({
+        completedRound,
+        score: resultData.score,
+        distanceKm: resultData.distance,
+        actual: initialCoords,
+        guess: selectedCoords,
+        finished: guessData.finished,
+        nextRound: guessData.currentRound,
+        totalScore: guessData.totalScore,
+      });
+        
+      // If game finished and achievements unlocked, mark it so achievement system handles navigation
+      if (guessData.finished && guessData.achievementsUnlocked.length > 0) {
+        setFinishedGamePending(true);
       }
 
-      // NOT FINISHED → advance to next round
-      setRound(guessData.currentRound);
-      await loadRoundLocation();
+      // Prefetch next round location so it's ready when user continues
+      setPendingNextLocation(null);
+      if (!guessData.finished) {
+        fetchAndPersistLocation()
+          .then(setPendingNextLocation)
+          .catch((err) => {
+            console.error('Prefetch next location failed:', err);
+            setPendingNextLocation(null);
+          });
+      }
     } catch (e) {
       console.error(e);
       alert((e as Error).message || 'Failed to submit this round');
@@ -264,6 +293,47 @@ const StreetViewApp = () => {
     }
   };
 
+  const handleContinue = async () => {
+    if (!postRoundSummary) return;
+
+    if (postRoundSummary.finished) {
+      // If there are achievements queued, close modal and let them show first
+      // Achievement system will handle navigation after all popups are closed
+      if (achievementQueue.length > 0) {
+        setPostRoundSummary(null);
+        return;
+      }
+      
+      // No achievements, safe to navigate to results
+      navigate(`/results/${gameId}`, {
+        state: {
+          gameId,
+        },
+        replace: true,
+      });
+      return;
+    }
+
+    setPostRoundSummary(null);
+
+    if (pendingNextLocation) {
+      applyLocationToPano(pendingNextLocation.position, pendingNextLocation.locationId);
+      setRound(postRoundSummary.nextRound);
+      setPendingNextLocation(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setRound(postRoundSummary.nextRound);
+      await loadRoundLocation();
+    } catch (err) {
+      console.error('Failed to load next round:', err);
+      alert('Failed to load next round. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleCloseCurrentAchievement = () => {
     setAchievementQueue((prevQueue) => {
       const [, ...rest] = prevQueue;
@@ -350,7 +420,6 @@ const StreetViewApp = () => {
           initialZoom={1}
           onSelect={(coords) => {
             setSelectedCoords(coords);
-            // console.log('Selected coords from MiniMap:', coords);
           }}
           className="overflow-hidden shadow-lg rounded-xl"
           style={{ width: 300, height: 200 }}
@@ -358,12 +427,55 @@ const StreetViewApp = () => {
         <button
           className="px-3 py-3 bg-slate-900 text-white font-semibold rounded-xl shadow hover:bg-slate-800 transition disabled:opacity-60 disabled:cursor-not-allowed border-slate-700"
           onClick={handleSubmitGuess}
-          disabled={!selectedCoords || submitting || !!error || loading}
+          disabled={!selectedCoords || submitting || !!error || loading || !!postRoundSummary}
         >
           {submitting ? 'Submitting…' : selectedCoords ? 'Submit Guess' : 'Select a location on the map'}
         </button>
       </div>
 
+      {postRoundSummary && (
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4 z-[12000]">
+          <div className="bg-linear-to-r from-slate-800 to-blue-900 rounded-2xl p-8 border-2 border-blue-500 shadow-2xl shadow-blue-900/50 w-full max-w-3xl">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <h2 className="text-xl font-semibold text-blue-300">
+                Round {postRoundSummary.completedRound} summary
+              </h2>
+              <div className="text-sm text-blue-100">
+                Score: <span className="font-semibold text-green-400">{postRoundSummary.score}</span> · Distance:{' '}
+                <span className="font-semibold text-blue-200">{postRoundSummary.distanceKm.toFixed(1)} km</span>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <RoundResultMap
+                actual={postRoundSummary.actual}
+                guess={postRoundSummary.guess}
+                distanceKm={postRoundSummary.distanceKm}
+              />
+            </div>
+
+            <div className="mt-4 text-sm text-blue-200">
+              <div>
+                Actual: {postRoundSummary.actual.lat.toFixed(5)}, {postRoundSummary.actual.lng.toFixed(5)}
+              </div>
+              <div>
+                Your guess: {postRoundSummary.guess.lat.toFixed(5)}, {postRoundSummary.guess.lng.toFixed(5)}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={handleContinue}
+                className="px-6 py-2.5 rounded-xl font-semibold bg-linear-to-r from-blue-500 to-sky-400 text-slate-950 shadow-lg shadow-blue-900/40 hover:from-blue-400 hover:to-sky-300 transition"
+              >
+                {postRoundSummary.finished
+                  ? 'See final results'
+                  : `Continue to Round ${postRoundSummary.nextRound}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <AchievementPopup
         achievement={currentAchievementPopup}
         isOpen={!!currentAchievementPopup}
