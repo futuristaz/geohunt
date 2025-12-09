@@ -15,15 +15,18 @@ namespace psi25_project.Services
         private readonly IMultiplayerGameRepository _gameRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly IRoomRepository _roomRepository;
+        private readonly IGeocodingService _geocodingService;
 
         public MultiplayerGameService(
             IMultiplayerGameRepository gameRepository,
             IPlayerRepository playerRepository,
-            IRoomRepository roomRepository)
+            IRoomRepository roomRepository,
+            IGeocodingService geocodingService)
         {
             _gameRepository = gameRepository;
             _playerRepository = playerRepository;
             _roomRepository = roomRepository;
+            _geocodingService = geocodingService;
         }
 
         public async Task<MultiplayerGameDto> StartGameAsync(Guid roomId)
@@ -34,7 +37,11 @@ namespace psi25_project.Services
             if (!room.Players.All(p => p.IsReady))
                 throw new InvalidOperationException("Not all players are ready");
 
-            var coords = GenerateRandomCoordinates();
+            var (success, result) = await _geocodingService.GetValidCoordinatesAsync();
+            if (!success) throw new InvalidOperationException("Failed to generate valid coordinates");
+            
+            var coordsData = (dynamic)result;
+            var coords = coordsData.modifiedCoordinates;
 
             var game = new MultiplayerGame
             {
@@ -44,8 +51,8 @@ namespace psi25_project.Services
                 TotalRounds = room.TotalRounds,
                 CurrentRound = 1,
                 State = GameState.InProgress,
-                RoundLatitude = coords.Lat,
-                RoundLongitude = coords.Lng,
+                RoundLatitude = (double)coords.lat,
+                RoundLongitude = (double)coords.lng,
                 Players = room.Players.Select(p => new MultiplayerPlayer
                 {
                     Id = Guid.NewGuid(),
@@ -58,7 +65,6 @@ namespace psi25_project.Services
 
             await _gameRepository.AddAsync(game);
 
-            // Update room state
             room.Status = RoomStatus.InGame;
             await _roomRepository.UpdateRoomAsync(room);
 
@@ -80,15 +86,12 @@ namespace psi25_project.Services
             mp.LastGuessLongitude = longitude;
             mp.Finished = true;
 
-            // Calculate distance using DistanceCalculator
             var distanceKm = DistanceCalculator.CalculateHaversineDistance(
                 new GeocodeResultDto { Lat = latitude, Lng = longitude },
                 new GeocodeResultDto { Lat = game.RoundLatitude ?? 0, Lng = game.RoundLongitude ?? 0 },
                 2);
 
-            mp.DistanceMeters = distanceKm * 1000; // convert km to meters
-
-            // Calculate score using ScoreCalculator
+            mp.DistanceMeters = distanceKm * 1000;
             mp.Score += ScoreCalculator.CalculateGeoScore(distanceKm);
 
             await _gameRepository.UpdateAsync(game);
@@ -104,7 +107,6 @@ namespace psi25_project.Services
             };
         }
 
-        // --- Next Round ---
         public async Task<MultiplayerGameDto> NextRoundAsync(Guid gameId)
         {
             var game = await _gameRepository.GetByIdAsync(gameId);
@@ -114,9 +116,15 @@ namespace psi25_project.Services
                 throw new InvalidOperationException("All rounds already completed");
 
             game.CurrentRound++;
-            var coords = GenerateRandomCoordinates();
-            game.RoundLatitude = coords.Lat;
-            game.RoundLongitude = coords.Lng;
+            
+            var (success, result) = await _geocodingService.GetValidCoordinatesAsync();
+            if (!success) throw new InvalidOperationException("Failed to generate valid coordinates");
+            
+            var coordsData = (dynamic)result;
+            var coords = coordsData.modifiedCoordinates;
+            
+            game.RoundLatitude = (double)coords.lat;
+            game.RoundLongitude = (double)coords.lng;
 
             foreach (var mp in game.Players)
             {
@@ -130,7 +138,6 @@ namespace psi25_project.Services
             return MapToDto(game);
         }
 
-        // --- End Game ---
         public async Task<MultiplayerGameDto> EndGameAsync(Guid gameId)
         {
             var game = await _gameRepository.GetByIdAsync(gameId);
@@ -156,7 +163,6 @@ namespace psi25_project.Services
             return MapToDto(game);
         }
 
-        // --- Past Games ---
         public async Task<List<GameResultDto>> GetPastGamesForRoomAsync(Guid roomId)
         {
             var games = await _gameRepository.GetPastGamesForRoomAsync(roomId);
@@ -181,22 +187,16 @@ namespace psi25_project.Services
 
         public async Task<MultiplayerPlayer?> GetCurrentGameForPlayerAsync(Guid playerId)
         {
-            // Get player entity
             var player = await _playerRepository.GetPlayerByIdAsync(playerId);
             if (player == null || !player.RoomId.HasValue) return null;
 
             var roomId = player.RoomId.Value;
-
-            // Get the current active game for the room
             var game = await _gameRepository.GetByRoomIdAsync(roomId);
             if (game == null) return null;
 
-            // Return the multiplayer player object from the current game
             return game.Players.FirstOrDefault(p => p.PlayerId == playerId);
         }
 
-
-        // --- Helpers ---
         private static MultiplayerGameDto MapToDto(MultiplayerGame game) => new()
         {
             GameId = game.Id,
@@ -216,12 +216,5 @@ namespace psi25_project.Services
                 DistanceMeters = p.DistanceMeters
             }).ToList()
         };
-
-        private static GeocodeResultDto GenerateRandomCoordinates()
-        {
-            var lat = 4.684954529774102;
-            var lng = -74.53974505304815;
-            return new GeocodeResultDto { Lat = lat, Lng = lng };
-        }
     }
 }

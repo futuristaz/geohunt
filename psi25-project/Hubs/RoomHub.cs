@@ -12,20 +12,18 @@ namespace psi25_project.Hubs
     public class RoomHub : Hub
     {
         private readonly IRoomOnlineService _roomOnlineService;
-        private readonly GeoHuntContext _context; // ✅ Add this
+        private readonly GeoHuntContext _context;
 
         public RoomHub(IRoomOnlineService roomOnlineService, GeoHuntContext context)
         {
             _roomOnlineService = roomOnlineService;
-            _context = context; // ✅ Add this
+            _context = context;
         }
 
-        // Player joins a room
         public async Task JoinRoom(string roomCode, Guid playerId, string displayName)
         {
             var connectionId = Context.ConnectionId;
             
-            // Get the actual room from database
             var room = await _context.Rooms
                 .Include(r => r.Players)
                 .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
@@ -38,7 +36,6 @@ namespace psi25_project.Hubs
             var roomId = room.Id.ToString();
             await Groups.AddToGroupAsync(connectionId, roomId);
             
-            // Remove any existing connection for this player
             var existingPlayer = _roomOnlineService.GetOnlinePlayers(roomId)
                 .FirstOrDefault(p => p.PlayerId == playerId);
             
@@ -48,7 +45,6 @@ namespace psi25_project.Hubs
                 _roomOnlineService.RemoveOnlinePlayer(roomId, existingPlayer.ConnectionId);
             }
             
-            // Add player with new connection
             _roomOnlineService.AddOnlinePlayer(roomId, new PlayerOnline
             {
                 PlayerId = playerId,
@@ -59,7 +55,6 @@ namespace psi25_project.Hubs
 
             Console.WriteLine($"Player {displayName} joined room {roomCode}");
 
-            // ✅ Broadcast the actual database players (with correct ready states)
             var dbPlayers = room.Players.Select(p => new
             {
                 id = p.Id.ToString(),
@@ -71,12 +66,10 @@ namespace psi25_project.Hubs
             await Clients.Group(roomId).SendAsync("PlayerListUpdated", dbPlayers);
         }
 
-        // Player leaves manually
         public async Task LeaveRoom(string roomCode)
         {
             var connectionId = Context.ConnectionId;
             
-            // Get room from database
             var room = await _context.Rooms
                 .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
                 
@@ -89,7 +82,6 @@ namespace psi25_project.Hubs
             {
                 await Clients.Group(roomId).SendAsync("PlayerLeft", removedPlayer.PlayerId);
                 
-                // Broadcast updated list from database
                 var dbRoom = await _context.Rooms
                     .Include(r => r.Players)
                     .FirstOrDefaultAsync(r => r.Id == room.Id);
@@ -111,10 +103,8 @@ namespace psi25_project.Hubs
             await Groups.RemoveFromGroupAsync(connectionId, roomId);
         }
 
-        // Toggle ready/unready
         public async Task UpdateReadyState(string roomCode, Guid playerId, bool isReady)
         {
-            // Get room from database
             var room = await _context.Rooms
                 .Include(r => r.Players)
                 .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
@@ -123,10 +113,8 @@ namespace psi25_project.Hubs
             
             var roomId = room.Id.ToString();
             
-            // Update in-memory online service
             _roomOnlineService.UpdatePlayerState(roomId, playerId, isReady);
             
-            // Broadcast database players (source of truth)
             var dbPlayers = room.Players.Select(p => new
             {
                 id = p.Id.ToString(),
@@ -138,7 +126,6 @@ namespace psi25_project.Hubs
             await Clients.Group(roomId).SendAsync("PlayerListUpdated", dbPlayers);
         }
 
-        // Handle disconnect
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var connectionId = Context.ConnectionId;
@@ -151,7 +138,6 @@ namespace psi25_project.Hubs
                 {
                     await Clients.Group(roomId).SendAsync("PlayerLeft", removedPlayer.PlayerId);
                     
-                    // Fetch and broadcast database players
                     var room = await _context.Rooms
                         .Include(r => r.Players)
                         .FirstOrDefaultAsync(r => r.Id.ToString() == roomId);
