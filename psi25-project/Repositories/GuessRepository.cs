@@ -2,10 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Repositories.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace psi25_project.Repositories
 {
@@ -30,6 +26,12 @@ namespace psi25_project.Repositories
                 .Include(g => g.Location)
                 .Where(g => g.GameId == gameId)
                 .ToListAsync();
+        }
+
+        public async Task<int> CountForUserAsync(Guid userId)
+        {
+            return await _context.Guesses
+                .CountAsync(g => g.Game.UserId == userId);
         }
     }
 }

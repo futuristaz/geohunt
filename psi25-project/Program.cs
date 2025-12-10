@@ -43,6 +43,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddScoped<IGuessRepository, GuessRepository>();
+builder.Services.AddScoped<IAchievementService, AchievementService>();
 builder.Services.AddScoped<IGuessService, GuessService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
@@ -53,6 +54,9 @@ builder.Services.AddSingleton<IRoomOnlineService, RoomOnlineService>();
 builder.Services.AddScoped<IMultiplayerGameRepository, MultiplayerGameRepository>();
 builder.Services.AddScoped<IMultiplayerGameService, MultiplayerGameService>();
 
+builder.Services.AddScoped<IAchievementRepository, AchievementRepository>();
+builder.Services.AddScoped<IUserStatsRepository, UserStatsRepository>();
+builder.Services.AddScoped<IGuessRepository, GuessRepository>();
 builder.Services.AddSingleton<ObjectValidator<LocationDto>>();
 
 builder.Services.AddHttpClient<IGoogleMapsGateway, GoogleMapsGateway>()
@@ -132,7 +136,7 @@ builder.Services.AddSignalR().AddJsonProtocol(options =>
 // ---------------- Build App ----------------
 var app = builder.Build();
 
-// ---------------- Middleware ----------------
+// ---------------- Middleware & Seeding ----------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -146,32 +150,30 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
-
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// ---------------- Routing & CORS ----------------
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<GeoHuntContext>();
+    await context.Database.MigrateAsync();
+    await AchievementSeeder.SeedAchievements(context);
+
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    await RoleSeeder.SeedRoles(roleManager);
+}
+
+// ---------------- Routing ----------------
 app.UseRouting();
-
 app.UseCors("CorsPolicy");
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 // ---------------- Map Endpoints ----------------
 app.MapControllers();
-
 app.MapHub<RoomHub>("/roomHub");
 app.MapHub<GameHub>("/gameHub");
-
 app.MapFallbackToFile("/index.html");
-
-// ---------------- Seed Roles ----------------
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-    await RoleSeeder.SeedRoles(roleManager);
-}
 
 // ---------------- Run ----------------
 try
@@ -189,3 +191,4 @@ finally
 }
 
 public partial class Program { }
+

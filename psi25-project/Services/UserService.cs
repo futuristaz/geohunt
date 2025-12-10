@@ -68,7 +68,7 @@ namespace psi25_project.Services
             return new UserAccountDto
             {
                 Id = user.Id,
-                Username = user.UserName,
+                Username = user.UserName ?? string.Empty,
                 Email = user.Email,
                 CreatedAt = user.CreatedAt,
                 Roles = roles.ToList()

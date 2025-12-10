@@ -10,7 +10,7 @@ export default function Home() {
       try {
         const res = await fetch('/api/User/me', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
         });
         if (!res.ok) {
           navigate('/login', { replace: true });
@@ -23,12 +23,11 @@ export default function Home() {
     checkLogin();
   }, [navigate]);
 
-  // --- KEEP THIS FROM YOUR BRANCH ---
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/Account/logout', {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
       if (res.ok) {
         setLoggedIn(false);
@@ -42,7 +41,6 @@ export default function Home() {
       alert('An error occurred during logout. Please try again.');
     }
   };
-  // ----------------------------------
 
   return (
     <main className="min-h-full text-white flex items-center justify-center relative px-4 py-15">
@@ -52,7 +50,6 @@ export default function Home() {
             <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">
               Welcome to <span className="text-blue-300">GeoHunt</span> 🌍
             </h1>
-
             <p className="text-base md:text-lg text-blue-200 max-w-2xl mx-auto">
               Explore the world, make precise guesses, unlock achievements, and
               track your progress in a map-based adventure built for explorers.
@@ -69,14 +66,12 @@ export default function Home() {
               Start Playing
             </button>
 
-            {/* --- KEEP THIS FROM YOUR BRANCH --- */}
             <button
               onClick={() => navigate('/joinroom')}
               className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow hover:bg-green-700 transition"
             >
               Join Room
             </button>
-            {/* ----------------------------------- */}
 
             <button
               onClick={() => navigate('/about')}
@@ -88,7 +83,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Optional: Add logout button somewhere */}
           <div className="text-center mt-6">
             <button
               onClick={handleLogout}
@@ -97,7 +91,6 @@ export default function Home() {
               Logout
             </button>
           </div>
-
         </div>
       </section>
     </main>

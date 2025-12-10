@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using psi25_project.Models.Dtos;
 using psi25_project.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -24,14 +21,15 @@ public class GuessController : ControllerBase
 
         try
         {
-            var (guessDto, finished, currentRound, totalScore) = await _guessService.CreateGuessAsync(dto);
+            var (guessDto, finished, currentRound, totalScore, newAchievements) = await _guessService.CreateGuessAsync(dto);
 
-            return CreatedAtAction(nameof(CreateGuess), new { id = guessDto.Id }, new
+            return Ok(new
             {
                 guess = guessDto,
                 finished,
                 currentRound,
-                totalScore
+                totalScore,
+                achievementsUnlocked = newAchievements
             });
         }
         catch (KeyNotFoundException ex)
