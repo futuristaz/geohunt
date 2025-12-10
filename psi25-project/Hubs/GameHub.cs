@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using psi25_project.Data;
-using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Services.Interfaces;
 

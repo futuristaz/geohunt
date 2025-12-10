@@ -2,9 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using psi25_project.Models.Dtos;
 using psi25_project.Services.Interfaces;
-using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace psi25_project.Controllers
 {

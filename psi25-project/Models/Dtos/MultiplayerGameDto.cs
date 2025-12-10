@@ -12,15 +12,12 @@ namespace psi25_project.Models.Dtos
         public Guid GameId { get; set; }
         public Guid RoomId { get; set; }
 
-        // Round info
         public int CurrentRound { get; set; }
         public int TotalRounds { get; set; }
 
-        // Coordinates for the current round (shared for all players)
         public double? RoundLatitude { get; set; }
         public double? RoundLongitude { get; set; }
 
-        // List of players in this game
         public List<MultiplayerPlayerDto> Players { get; set; } = new();
     }
 
@@ -33,12 +30,9 @@ namespace psi25_project.Models.Dtos
         public string DisplayName { get; set; } = "";
         public int Score { get; set; }
         public bool Finished { get; set; }
-
-        // Last guess coordinates
         public double? LastGuessLatitude { get; set; }
         public double? LastGuessLongitude { get; set; }
 
-        // Distance from target in meters
         public double? DistanceMeters { get; set; }
     }
 
@@ -62,8 +56,6 @@ namespace psi25_project.Models.Dtos
         public Guid GameId { get; set; }
         public DateTime StartedAt { get; set; }
         public DateTime? FinishedAt { get; set; }
-
-        // Player scores in the game
         public List<PlayerScoreDto> PlayerScores { get; set; } = new();
     }
 
