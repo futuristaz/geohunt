@@ -131,16 +131,6 @@ public class AchievementServiceLogicTests
         Assert.False(isNewLongest);
     }
 
-//     EvaluateRoundAchievements_FirstGuess_AddsFirstGuessCode
-
-// EvaluateRoundAchievements_BullseyeDistance_AddsBullseyeCode
-
-// EvaluateRoundAchievements_Within1Km_AddsNear1kmCode
-
-// EvaluateRoundAchievements_FarDistance_AddsNoDistanceAchievements
-
-// EvaluateRoundAchievements_CombinationOfConditions_AddsAllRelevantCodes
-
     [Fact]
     public void EvaluateRoundAchievements_FirstGuess_AddsFirstGuessCode()
     {
@@ -216,10 +206,6 @@ public class AchievementServiceLogicTests
         Assert.Contains(AchievementCodes.Near1km, result);
         Assert.Contains(AchievementCodes.FirstGuess, result);
     }
-
-// EvaluateGameAchievements_StreakEquals30_AddsStreakMaster
-// EvaluateGameAchievements_LateNightGame_AddsLateNightPlayer
-// EvaluateGameAchievements_NoConditionsMet_ReturnsEmptyList
 
     [Fact]
     public void EvaluateGameAchievements_TotalScoreAbove10k_AddsScore10k()
