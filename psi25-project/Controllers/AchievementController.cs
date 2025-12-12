@@ -7,7 +7,7 @@ using psi25_project.Services.Interfaces;
 public class AchievementController : ControllerBase
 {
     private readonly IAchievementService _achievementService;
-    public AchievementController(IAchievementService achievementService, ILogger<AchievementController> logger)
+    public AchievementController(IAchievementService achievementService)
     {
         _achievementService = achievementService;
     }
@@ -22,14 +22,14 @@ public class AchievementController : ControllerBase
         {
             var achievements = await _achievementService.GetActiveAchievementsAsync();
 
-            if (achievements == null || achievements.Count == 0)
+            if (achievements.Count == 0)
                 return NoContent();
 
             return Ok(achievements);
         }
         catch (Exception ex)
         {
-            return Problem("Failed to get available achievements: ", ex.Message);
+            return Problem($"Failed to get available achievements: {ex.Message}");
         }
     }
 
@@ -43,13 +43,13 @@ public class AchievementController : ControllerBase
         {
             var achievements = await _achievementService.GetAchievementsForUserAsync(userId);
 
-            if (achievements == null || achievements.Count == 0)
+            if (achievements.Count == 0)
                 return NoContent();
             
             return Ok(achievements);
         } catch (Exception ex)
         {
-            return Problem("Failed to get unlocked achievements: ", ex.Message);
+            return Problem($"Failed to get unlocked achievements: {ex.Message}");
         }
     }
 
@@ -63,7 +63,7 @@ public class AchievementController : ControllerBase
             return Ok(stats);
         } catch (Exception ex)
         {
-            return Problem("Failed to get user stats: ", ex.Message);
+            return Problem($"Failed to get user stats: {ex.Message}");
         }
     }
 }

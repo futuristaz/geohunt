@@ -27,7 +27,7 @@ public class GameServiceTests
             TotalRounds = 5
         };
 
-        Game capturedGame = null;
+        Game? capturedGame = null;
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<Game>()))
             .Callback<Game>(g => capturedGame = g)
             .Returns(Task.CompletedTask);
@@ -57,7 +57,7 @@ public class GameServiceTests
             TotalRounds = 0
         };
 
-        Game capturedGame = null;
+        Game? capturedGame = null;
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<Game>()))
             .Callback<Game>(g => capturedGame = g)
             .Returns(Task.CompletedTask);
@@ -87,7 +87,7 @@ public class GameServiceTests
             TotalRounds = -5
         };
 
-        Game capturedGame = null;
+        Game? capturedGame = null;
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<Game>()))
             .Callback<Game>(g => capturedGame = g)
             .Returns(Task.CompletedTask);

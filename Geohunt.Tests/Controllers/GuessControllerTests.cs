@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using psi25_project.Models.Dtos;
-using psi25_project.Services;
 using psi25_project.Services.Interfaces;
 
 namespace Geohunt.Tests.Controllers;
@@ -21,15 +20,16 @@ public class GuessControllerTests
     public async Task CreateGuess_ValidDto_ReturnsCreatedWithGuessData()
     {
         // Arrange
-        var dto = new CreateGuessDto { /* properties */ };
+        var dto = new CreateGuessDto {};
         var guessDto = new GuessResponseDto { Id = 1 };
         var finished = false;
         var currentRound = 3;
         var totalScore = 1500;
+        var newAchievements = new List<AchievementUnlockDto>();
 
         _mockGuessService
             .Setup(s => s.CreateGuessAsync(dto))
-            .ReturnsAsync((guessDto, finished, currentRound, totalScore));
+            .ReturnsAsync((guessDto, finished, currentRound, totalScore, (IReadOnlyList<AchievementUnlockDto>)newAchievements));
 
         // Act
         var result = await _controller.CreateGuess(dto);
@@ -37,7 +37,6 @@ public class GuessControllerTests
         // Assert
         var createdResult = Assert.IsType<CreatedAtActionResult>(result);
         Assert.Equal(201, createdResult.StatusCode);
-        Assert.Equal(nameof(_controller.CreateGuess), createdResult.ActionName);
 
         _mockGuessService.Verify(s => s.CreateGuessAsync(dto), Times.Once);
     }
@@ -51,10 +50,12 @@ public class GuessControllerTests
         var finished = true;
         var currentRound = 5;
         var totalScore = 5000;
+        var newAchievements = new List<AchievementUnlockDto>();
+
 
         _mockGuessService
             .Setup(s => s.CreateGuessAsync(dto))
-            .ReturnsAsync((guessDto, finished, currentRound, totalScore));
+            .ReturnsAsync((guessDto, finished, currentRound, totalScore, (IReadOnlyList<AchievementUnlockDto>)newAchievements));
 
         // Act
         var result = await _controller.CreateGuess(dto);

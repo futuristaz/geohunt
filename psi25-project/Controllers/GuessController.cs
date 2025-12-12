@@ -23,7 +23,7 @@ public class GuessController : ControllerBase
         {
             var (guessDto, finished, currentRound, totalScore, newAchievements) = await _guessService.CreateGuessAsync(dto);
 
-            return Ok(new
+            return CreatedAtAction(nameof(CreateGuess), new {id = guessDto.Id}, new
             {
                 guess = guessDto,
                 finished,
