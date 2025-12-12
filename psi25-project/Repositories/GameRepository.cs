@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using psi25_project.Data;
 using psi25_project.Models;
 using psi25_project.Repositories.Interfaces;
-using System;
-using System.Threading.Tasks;
 
 namespace psi25_project.Repositories
 {

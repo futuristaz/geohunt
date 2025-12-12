@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using psi25_project.Data;
@@ -11,9 +12,11 @@ using psi25_project.Data;
 namespace psi25_project.Migrations
 {
     [DbContext(typeof(GeoHuntContext))]
-    partial class GeoHuntContextModelSnapshot : ModelSnapshot
+    [Migration("20251128135520_RoomUpdated")]
+    partial class RoomUpdated
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -152,45 +155,6 @@ namespace psi25_project.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("psi25_project.Models.Achievement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<int>("Scope")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("Achievements");
-                });
-
             modelBuilder.Entity("psi25_project.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -213,6 +177,9 @@ namespace psi25_project.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastRoomJoinedTime")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -369,67 +336,68 @@ namespace psi25_project.Migrations
                     b.ToTable("Locations");
                 });
 
-            modelBuilder.Entity("psi25_project.Models.UserAchievement", b =>
+            modelBuilder.Entity("psi25_project.Models.Player", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("AchievementId")
-                        .HasColumnType("integer");
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("text");
 
-                    b.Property<DateTime>("UnlockedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<bool>("IsReady")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AchievementId");
+                    b.HasIndex("RoomId");
 
-                    b.HasIndex("UserId", "AchievementId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
-                    b.ToTable("UserAchievements");
+                    b.ToTable("Players");
                 });
 
-            modelBuilder.Entity("psi25_project.Models.UserStats", b =>
+            modelBuilder.Entity("psi25_project.Models.Room", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("BestGameScore")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.Property<int>("CurrentStreakDays")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.Property<DateTime?>("LastPlayedDateUtc")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("LongestStreakDays")
+                    b.Property<double?>("CurrentRoundLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("CurrentRoundLongitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("CurrentRounds")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TotalGames")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("TotalGuesses")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                    b.Property<string>("RoomCode")
+                        .IsRequired()
+                        .HasColumnType("text");
 
-                    b.HasKey("UserId");
+                    b.Property<int>("TotalRounds")
+                        .HasColumnType("integer");
 
-                    b.ToTable("UserStats");
+                    b.HasKey("Id");
+
+                    b.ToTable("Rooms");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -513,13 +481,12 @@ namespace psi25_project.Migrations
                     b.Navigation("Location");
                 });
 
-            modelBuilder.Entity("psi25_project.Models.UserAchievement", b =>
+            modelBuilder.Entity("psi25_project.Models.Player", b =>
                 {
-                    b.HasOne("psi25_project.Models.Achievement", "Achievement")
-                        .WithMany()
-                        .HasForeignKey("AchievementId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                    b.HasOne("psi25_project.Models.Room", "Room")
+                        .WithMany("Players")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("psi25_project.Models.ApplicationUser", "User")
                         .WithMany()
@@ -527,18 +494,7 @@ namespace psi25_project.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Achievement");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("psi25_project.Models.UserStats", b =>
-                {
-                    b.HasOne("psi25_project.Models.ApplicationUser", "User")
-                        .WithOne()
-                        .HasForeignKey("psi25_project.Models.UserStats", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Room");
 
                     b.Navigation("User");
                 });
@@ -556,6 +512,11 @@ namespace psi25_project.Migrations
             modelBuilder.Entity("psi25_project.Models.Location", b =>
                 {
                     b.Navigation("Guesses");
+                });
+
+            modelBuilder.Entity("psi25_project.Models.Room", b =>
+                {
+                    b.Navigation("Players");
                 });
 #pragma warning restore 612, 618
         }
