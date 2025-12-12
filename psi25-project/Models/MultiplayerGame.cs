@@ -13,7 +13,7 @@ namespace psi25_project.Models
         public DateTime StartedAt { get; set; } = DateTime.UtcNow;
         public DateTime? FinishedAt { get; set; }
         public int CurrentRound { get; set; } = 1;
-        public int TotalRounds { get; set; } = 3;
+        public int TotalRounds { get; set; } = 1;
         public double? RoundLatitude { get; set; }
         public double? RoundLongitude { get; set; }
         public List<MultiplayerPlayer> Players { get; set; } = new();
