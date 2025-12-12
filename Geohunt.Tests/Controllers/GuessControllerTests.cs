@@ -35,8 +35,8 @@ public class GuessControllerTests
         var result = await _controller.CreateGuess(dto);
 
         // Assert
-        var createdResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, createdResult.StatusCode);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal(201, createdResult.StatusCode);
 
         _mockGuessService.Verify(s => s.CreateGuessAsync(dto), Times.Once);
     }
@@ -61,8 +61,8 @@ public class GuessControllerTests
         var result = await _controller.CreateGuess(dto);
 
         // Assert
-        var createdResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, createdResult.StatusCode);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal(201, createdResult.StatusCode);
     }
 
     [Fact]
