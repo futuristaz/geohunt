@@ -45,6 +45,14 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException(errorMsg);
 }
 
+// Normalize Render's postgres:// to postgresql:// for Npgsql compatibility
+if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+    !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+{
+    connectionString = "postgresql://" + connectionString.Substring("postgres://".Length);
+    Log.Information("Normalized connection string from postgres:// to postgresql://");
+}
+
 // Log success (without exposing credentials)
 var safeConnStr = connectionString.Length > 20
     ? $"{connectionString.Substring(0, 20)}...({connectionString.Length} chars)"
