@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using System;
 using psi25_project.Models.Dtos;
-using psi25_project.Utils;
+using psi25_project.Services.Interfaces;
 
 namespace psi25_project.Controllers
 {
@@ -9,23 +8,29 @@ namespace psi25_project.Controllers
     [Route("api/[controller]")]
     public class ResultController : ControllerBase
     {
+        private readonly IResultService _resultService;
+
+        public ResultController(IResultService resultService)
+        {
+            _resultService = resultService;
+        }
 
         [HttpPost]
         public IActionResult GetResult([FromBody] DistanceDto dto)
         {
-            var coords1 = dto.initialCoords;
-            var coords2 = dto.guessedCoords;
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             try
             {
-                var distance = DistanceCalculator.CalculateHaversineDistance(coords1, coords2, precision: 2);
-                var score = ScoreCalculator.CalculateGeoScore(distance);
+                var (distance, score) = _resultService.CalculateResult(dto);
+
                 return Ok(new
                 {
                     dto.initialCoords,
                     dto.guessedCoords,
                     distance,
-                    score,
+                    score
                 });
             }
             catch (Exception ex)

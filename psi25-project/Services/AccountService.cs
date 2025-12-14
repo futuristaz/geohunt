@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
+using psi25_project.Services.Interfaces;
 
 namespace psi25_project.Services
 {
-    public class AccountService
+    public class AccountService : IAccountService
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -29,9 +30,8 @@ namespace psi25_project.Services
             if (!result.Succeeded)
                 return (false, result.Errors);
 
-            await _userManager.AddToRoleAsync(user, "Player"); //all newly registered users will have 'Player' role
-
-            return (result.Succeeded, result.Errors);
+            await _userManager.AddToRoleAsync(user, "Player");
+            return (true, null);
         }
 
         public async Task<(bool Succeeded, string? Error)> LoginAsync(LoginDto model)

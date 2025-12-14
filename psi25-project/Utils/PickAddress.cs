@@ -1,15 +1,13 @@
-namespace psi25_project
+namespace psi25_project.Utils
 {
     public static class AddressProvider
     {
-        private static readonly Random random = new Random();
-
         public static string GetRandomAddress(string filePath = "addresses.txt")
         {
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"Address file not found: {filePath}");
 
-            string? selectedAddress = null; 
+            string? selectedAddress = null;
             int count = 0;
 
             using (var reader = new StreamReader(filePath))
@@ -21,7 +19,7 @@ namespace psi25_project
                         continue;
 
                     count++;
-                    if (random.Next(count) == 0) //reservoir sampling
+                    if (Random.Shared.Next(count) == 0) //reservoir sampling
                         selectedAddress = line;
                 }
             }

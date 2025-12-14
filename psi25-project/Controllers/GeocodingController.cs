@@ -1,13 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
-using psi25_project.Services;
+using psi25_project.Services.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
 public class GeocodingController : ControllerBase
 {
-    private readonly GeocodingService _geocodingService;
+    private readonly IGeocodingService _geocodingService;
 
-    public GeocodingController(GeocodingService geocodingService)
+    public GeocodingController(IGeocodingService geocodingService)
     {
         _geocodingService = geocodingService;
     }

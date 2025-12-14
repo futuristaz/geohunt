@@ -1,84 +1,28 @@
-using Microsoft.EntityFrameworkCore;
-using psi25_project.Models;
 using psi25_project.Models.Dtos;
+using psi25_project.Repositories.Interfaces;
+using psi25_project.Services.Interfaces;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using psi25_project.Data;
-
 
 namespace psi25_project.Services
 {
     public class LeaderboardService : ILeaderboardService
     {
-        private readonly GeoHuntContext _context;
+        private readonly ILeaderboardRepository _repository;
 
-        public LeaderboardService(GeoHuntContext context)
+        public LeaderboardService(ILeaderboardRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         public async Task<List<LeaderboardEntry>> GetTopLeaderboardAsync(int top = 20)
         {
-            var entries = await _context.Guesses
-                .Include(g => g.Game)
-                .ThenInclude(game => game.User)
-                .Select(g => new LeaderboardEntry
-                {
-                    Id = g.Id,
-                    DistanceKm = g.DistanceKm,
-                    GuessedAt = g.GuessedAt,
-                    TotalScore = g.Score,
-                    UserId = g.Game.User.Id,
-                    Username = g.Game.User.UserName
-                })
-                .OrderByDescending(x => x.TotalScore)
-                .Take(top)
-                .ToListAsync();
-
-            entries.Sort();
-
-            for (int i = 0; i < entries.Count; i++)
-                entries[i].Rank = i + 1;
-
-            return entries;
+            return await _repository.GetTopGuessesAsync(top);
         }
 
         public async Task<List<LeaderboardEntry>> GetTopPlayersAsync(int top = 20)
         {
-            var entries = await _context.Guesses
-                .Include(g => g.Game)
-                .ThenInclude(game => game.User)
-                .GroupBy(g => new
-                {
-                    g.Game.UserId,
-                    g.Game.User.UserName
-                })
-                .Select(group => new LeaderboardEntry
-                {
-                    UserId = group.Key.UserId,
-                    Username = group.Key.UserName,
-                    TotalScore = group.Max(g => g.Score),
-                    DistanceKm = group
-                        .OrderByDescending(g => g.Score)
-                        .ThenBy(g => g.DistanceKm)
-                        .Select(g => g.DistanceKm)
-                        .FirstOrDefault(),
-                    GuessedAt = group
-                        .OrderByDescending(g => g.Score)
-                        .ThenBy(g => g.DistanceKm)
-                        .Select(g => g.GuessedAt)
-                        .FirstOrDefault()
-                })
-                .OrderByDescending(x => x.TotalScore)
-                .Take(top)
-                .ToListAsync();
-
-            for (int i = 0; i < entries.Count; i++)
-                entries[i].Rank = i + 1;
-
-            return entries;
+            return await _repository.GetTopPlayersAsync(top);
         }
-
     }
 }
