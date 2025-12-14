@@ -79,7 +79,16 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5042") // React dev server
+        var allowedOrigins = new List<string> { "http://localhost:5042" }; // React dev server
+
+        // Add production origin from environment variable
+        var productionOrigin = builder.Configuration["PRODUCTION_ORIGIN"];
+        if (!string.IsNullOrEmpty(productionOrigin))
+        {
+            allowedOrigins.Add(productionOrigin);
+        }
+
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -92,6 +101,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.Cookie.SameSite = SameSiteMode.Lax;
+
+    // Production-specific cookie settings
+    if (!builder.Environment.IsDevelopment())
+    {
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    }
 
     options.Events.OnRedirectToLogin = ctx =>
     {

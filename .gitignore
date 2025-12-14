@@ -44,3 +44,14 @@ Thumbs.db
 
 # ASP.NET secrets
 secrets.json
+
+# Frontend build output
+frontend/dist/
+
+# Backend publish output
+psi25-project/publish/
+
+# Environment files with secrets
+.env
+.env.local
+.env.production
