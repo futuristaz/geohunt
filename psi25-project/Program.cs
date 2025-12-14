@@ -53,11 +53,25 @@ if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCas
     Log.Information("Normalized connection string from postgres:// to postgresql://");
 }
 
+// Add SSL mode if not present (Render requires SSL)
+if (!connectionString.Contains("sslmode=", StringComparison.OrdinalIgnoreCase))
+{
+    var separator = connectionString.Contains("?") ? "&" : "?";
+    connectionString += $"{separator}sslmode=Require";
+    Log.Information("Added SSL mode requirement to connection string");
+}
+
 // Log success (without exposing credentials)
 var safeConnStr = connectionString.Length > 20
     ? $"{connectionString.Substring(0, 20)}...({connectionString.Length} chars)"
     : "***";
 Log.Information("Database connection configured: {SafeConnectionString}", safeConnStr);
+
+// Log which source provided the connection string
+var source = Environment.GetEnvironmentVariable("DATABASE_URL") != null ? "DATABASE_URL" :
+             Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") != null ? "ConnectionStrings__DefaultConnection" :
+             "Configuration";
+Log.Information("Connection string source: {Source}", source);
 
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(connectionString));
@@ -205,16 +219,23 @@ using (var scope = app.Services.CreateScope())
     try
     {
         Log.Information("Testing database connection...");
+        Log.Information("Attempting to connect to database...");
         var canConnect = await context.Database.CanConnectAsync();
         if (!canConnect)
         {
-            throw new InvalidOperationException("Database connection test failed");
+            throw new InvalidOperationException("Database connection test failed - CanConnectAsync returned false");
         }
         Log.Information("Database connection successful");
     }
     catch (Exception ex)
     {
-        Log.Fatal(ex, "Failed to connect to database. Check DATABASE_URL environment variable format.");
+        Log.Fatal(ex, "Failed to connect to database. Error: {ErrorMessage}. Connection string length: {Length}",
+            ex.Message, connectionString?.Length ?? 0);
+        Log.Fatal("Exception type: {ExceptionType}", ex.GetType().FullName);
+        if (ex.InnerException != null)
+        {
+            Log.Fatal("Inner exception: {InnerException}", ex.InnerException.Message);
+        }
         throw;
     }
 
