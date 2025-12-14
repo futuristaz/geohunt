@@ -8,6 +8,35 @@ namespace Geohunt.Tests.Services
 {
     public class GeocodingServiceTests : IDisposable
     {
+        private sealed class AddressFileScope : IDisposable
+        {
+            private readonly string _path;
+            private readonly bool _existed;
+            private readonly string? _originalContents;
+
+            public AddressFileScope(string singleAddressLine)
+            {
+                _path = Path.Combine(Directory.GetCurrentDirectory(), "addresses.txt");
+                _existed = File.Exists(_path);
+                _originalContents = _existed ? File.ReadAllText(_path) : null;
+
+                File.WriteAllText(_path, singleAddressLine + Environment.NewLine);
+            }
+
+            public void Dispose()
+            {
+                if (_existed)
+                {
+                    File.WriteAllText(_path, _originalContents ?? string.Empty);
+                }
+                else
+                {
+                    if (File.Exists(_path))
+                        File.Delete(_path);
+                }
+            }
+        }
+
         private readonly Mock<IGoogleMapsGateway> _mockGateway;
         private readonly IMemoryCache _cache;
         private readonly GeocodingService _service;
@@ -17,177 +46,145 @@ namespace Geohunt.Tests.Services
             _mockGateway = new Mock<IGoogleMapsGateway>();
             _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 100 });
             _service = new GeocodingService(_mockGateway.Object, _cache);
-
-            // Default setup - geocoding returns coordinates
-            _mockGateway.Setup(g => g.GetCoordinatesAsync(It.IsAny<string>()))
-                .ReturnsAsync(new GeocodeResultDto { Lat = 40.7128, Lng = -74.0060 });
-
-            // Default setup - street view found on first attempt
-            _mockGateway.Setup(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()))
-                .ReturnsAsync(new StreetViewLocationDto { PanoId = "test123" });
         }
 
         public void Dispose()
         {
-            _cache?.Dispose();
+            _cache.Dispose();
         }
 
         [Fact]
-        public async Task GetValidCoordinatesAsync_CacheMiss_CallsGateway()
+        public async Task GetValidCoordinatesAsync_CacheMiss_CallsGatewayAndCachesByNormalizedKey()
         {
+            // Arrange
+            var address = $"MiXeD CaSe {Guid.NewGuid():N}";
+            using var _ = new AddressFileScope(address);
+
+            var coords = new GeocodeResultDto { Lat = 40.7128, Lng = -74.0060 };
+            _mockGateway.Setup(g => g.GetCoordinatesAsync(address)).ReturnsAsync(coords);
+            _mockGateway.Setup(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()))
+                .ReturnsAsync(new StreetViewLocationDto { PanoId = "test123" });
+
             // Act
             var (success, result) = await _service.GetValidCoordinatesAsync();
 
             // Assert
             Assert.True(success);
-            _mockGateway.Verify(g => g.GetCoordinatesAsync(It.IsAny<string>()), Times.Once);
+            Assert.NotNull(result);
+            _mockGateway.Verify(g => g.GetCoordinatesAsync(address), Times.Once);
+
+            var normalizedKey = address.ToLowerInvariant();
+            Assert.True(_cache.TryGetValue(normalizedKey, out GeocodeResultDto? cached));
+            Assert.NotNull(cached);
+            Assert.Equal(coords.Lat, cached!.Lat);
+            Assert.Equal(coords.Lng, cached.Lng);
         }
 
         [Fact]
-        public async Task GetValidCoordinatesAsync_CacheHit_DoesNotCallGatewayAgain()
+        public async Task GetValidCoordinatesAsync_CacheHit_DoesNotCallGeocodeTwice()
         {
             // Arrange
-            // Pre-populate cache with a geocode result for a known address
-            var cacheKey = "new york, ny";
-            var cachedResult = new GeocodeResultDto { Lat = 40.7128, Lng = -74.0060 };
-            _cache.Set(cacheKey, cachedResult, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-                Size = 1
-            });
+            var address = $"Only Address {Guid.NewGuid():N}";
+            using var _ = new AddressFileScope(address);
 
-            // Note: Since AddressProvider.GetRandomAddress() is static and random,
-            // we can't guarantee it will select our cached address. This test
-            // demonstrates the cache mechanism conceptually but may not reliably
-            // test cache hits due to the static dependency.
+            _mockGateway.Setup(g => g.GetCoordinatesAsync(address))
+                .ReturnsAsync(new GeocodeResultDto { Lat = 1, Lng = 2 });
+            _mockGateway.Setup(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()))
+                .ReturnsAsync(new StreetViewLocationDto { PanoId = "test123" });
 
-            // For a more reliable test, we would need to refactor AddressProvider
-            // to be injectable. For now, we verify the cache was set correctly.
-            Assert.True(_cache.TryGetValue(cacheKey, out GeocodeResultDto? retrieved));
-            Assert.Equal(40.7128, retrieved?.Lat);
-            Assert.Equal(-74.0060, retrieved?.Lng);
-        }
-
-        [Fact]
-        public async Task GetValidCoordinatesAsync_NormalizedCacheKey_TreatsUpperLowerCaseSame()
-        {
-            // Arrange
-            // Pre-populate cache with lowercase key
-            var lowercaseKey = "new york, ny";
-            var cachedResult = new GeocodeResultDto { Lat = 40.7128, Lng = -74.0060 };
-            _cache.Set(lowercaseKey, cachedResult, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-                Size = 1
-            });
-
-            // Act - Try to retrieve with uppercase key
-            var uppercaseKey = "NEW YORK, NY";
-            var normalizedKey = uppercaseKey.ToLowerInvariant();
+            // Act
+            var first = await _service.GetValidCoordinatesAsync();
+            var second = await _service.GetValidCoordinatesAsync();
 
             // Assert
-            Assert.True(_cache.TryGetValue(normalizedKey, out GeocodeResultDto? retrieved));
-            Assert.Equal(cachedResult.Lat, retrieved?.Lat);
-            Assert.Equal(cachedResult.Lng, retrieved?.Lng);
+            Assert.True(first.success);
+            Assert.True(second.success);
+            _mockGateway.Verify(g => g.GetCoordinatesAsync(address), Times.Once);
+            _mockGateway.Verify(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()), Times.Exactly(2));
         }
 
         [Fact]
-        public async Task GetValidCoordinatesAsync_CacheExpiration_SetsOneHourExpiration()
+        public async Task GetValidCoordinatesAsync_RetriesUntilStreetViewFound_ReturnsAttemptCount()
         {
             // Arrange
-            var testAddress = "test address";
-            var cacheKey = testAddress.ToLowerInvariant();
+            var address = $"Retry Address {Guid.NewGuid():N}";
+            using var _ = new AddressFileScope(address);
 
-            _mockGateway.Setup(g => g.GetCoordinatesAsync(testAddress))
-                .ReturnsAsync(new GeocodeResultDto { Lat = 40.0, Lng = -74.0 });
+            _mockGateway.Setup(g => g.GetCoordinatesAsync(address))
+                .ReturnsAsync(new GeocodeResultDto { Lat = 10, Lng = 20 });
 
-            // Note: This test verifies the cache options are set correctly.
-            // Due to the static AddressProvider, we can't directly control which
-            // address is selected, so we're testing the mechanism conceptually.
+            _mockGateway.SetupSequence(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()))
+                .ReturnsAsync((StreetViewLocationDto?)null)
+                .ReturnsAsync((StreetViewLocationDto?)null)
+                .ReturnsAsync(new StreetViewLocationDto { PanoId = "pano-3" });
 
-            var beforeExpiration = DateTime.UtcNow;
+            // Act
+            var (success, result) = await _service.GetValidCoordinatesAsync();
 
-            // Manually populate cache to verify expiration settings
-            _cache.Set(cacheKey, new GeocodeResultDto { Lat = 40.0, Lng = -74.0 },
-                new MemoryCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-                    Size = 1
-                });
+            // Assert
+            Assert.True(success);
+            Assert.NotNull(result);
+            _mockGateway.Verify(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()), Times.Exactly(3));
 
-            var afterExpiration = beforeExpiration.AddHours(1);
-
-            // Assert - verify cache entry exists
-            Assert.True(_cache.TryGetValue(cacheKey, out GeocodeResultDto? _));
-
-            // Note: Testing actual expiration would require time manipulation
-            // or waiting 1 hour, which is impractical for unit tests
+            var attemptsProp = result.GetType().GetProperty("attempts");
+            Assert.NotNull(attemptsProp);
+            var attempts = (int)attemptsProp!.GetValue(result)!;
+            Assert.Equal(3, attempts);
         }
 
         [Fact]
-        public async Task GetValidCoordinatesAsync_ConcurrentRequestsSameAddress_DeduplicatesRequests()
+        public async Task GetValidCoordinatesAsync_ConcurrentCallsSameAddress_DeduplicatesGeocodeRequests()
         {
             // Arrange
+            var address = $"Concurrent Address {Guid.NewGuid():N}";
+            using var _ = new AddressFileScope(address);
+
             var callCount = 0;
-            _mockGateway.Setup(g => g.GetCoordinatesAsync(It.IsAny<string>()))
-                .ReturnsAsync((string address) =>
+            var tcs = new TaskCompletionSource<GeocodeResultDto>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            _mockGateway.Setup(g => g.GetCoordinatesAsync(address))
+                .Returns(() =>
                 {
                     Interlocked.Increment(ref callCount);
-                    // Simulate slow API call
-                    Thread.Sleep(100);
-                    return new GeocodeResultDto { Lat = 40.7128, Lng = -74.0060 };
+                    return tcs.Task;
                 });
 
-            // Note: Due to the static AddressProvider.GetRandomAddress(), we can't
-            // guarantee concurrent calls will request the same address. This test
-            // demonstrates the deduplication mechanism exists (using ConcurrentDictionary
-            // with Lazy<Task<T>>), but reliable testing would require injectable
-            // address provider.
+            _mockGateway.Setup(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()))
+                .ReturnsAsync(new StreetViewLocationDto { PanoId = "test123" });
 
-            // Act - Make concurrent calls
-            var tasks = new List<Task<(bool, object)>>();
-            for (int i = 0; i < 5; i++)
-            {
-                tasks.Add(_service.GetValidCoordinatesAsync());
-            }
+            var tasks = Enumerable.Range(0, 5).Select(_i => _service.GetValidCoordinatesAsync()).ToArray();
+
+            await Task.Yield();
+            tcs.TrySetResult(new GeocodeResultDto { Lat = 1, Lng = 2 });
 
             await Task.WhenAll(tasks);
 
-            // Assert - All tasks completed successfully
-            Assert.All(tasks, task => Assert.True(task.Result.Item1));
-
-            // Note: callCount may be 5 if different addresses were selected
-            // In a production test with injectable dependencies, we would verify
-            // callCount == 1 for the same address
+            // Assert
+            Assert.Equal(1, callCount);
+            Assert.All(tasks, t => Assert.True(t.Result.success));
         }
 
         [Fact]
-        public async Task GetValidCoordinatesAsync_InFlightDictionary_CleansUpAfterCompletion()
+        public async Task GetValidCoordinatesAsync_WhenGeocodingThrows_AllowsRetryOnNextCall()
         {
             // Arrange
-            var geocodeCalled = false;
-            _mockGateway.Setup(g => g.GetCoordinatesAsync(It.IsAny<string>()))
-                .ReturnsAsync((string address) =>
-                {
-                    geocodeCalled = true;
-                    return new GeocodeResultDto { Lat = 40.7128, Lng = -74.0060 };
-                });
+            var address = $"Throw Address {Guid.NewGuid():N}";
+            using var _ = new AddressFileScope(address);
+
+            _mockGateway.SetupSequence(g => g.GetCoordinatesAsync(address))
+                .ThrowsAsync(new InvalidOperationException("boom"))
+                .ReturnsAsync(new GeocodeResultDto { Lat = 1, Lng = 2 });
+
+            _mockGateway.Setup(g => g.GetStreetViewMetadataAsync(It.IsAny<double>(), It.IsAny<double>()))
+                .ReturnsAsync(new StreetViewLocationDto { PanoId = "test123" });
 
             // Act
-            var (success, result) = await _service.GetValidCoordinatesAsync();
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetValidCoordinatesAsync());
+            var (success, _) = await _service.GetValidCoordinatesAsync();
 
             // Assert
             Assert.True(success);
-            Assert.True(geocodeCalled);
-
-            // Note: We can't directly verify the ConcurrentDictionary cleanup
-            // without reflection or internal visibility. The test verifies that
-            // the service completes successfully, which implies the finally block
-            // in the service executed (including TryRemove).
-
-            // In production code, the in-flight dictionary is cleaned up in the
-            // finally block after each geocode request completes.
-            _mockGateway.Verify(g => g.GetCoordinatesAsync(It.IsAny<string>()), Times.Once);
+            _mockGateway.Verify(g => g.GetCoordinatesAsync(address), Times.Exactly(2));
         }
     }
 }
