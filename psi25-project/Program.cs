@@ -61,6 +61,13 @@ if (!connectionString.Contains("sslmode=", StringComparison.OrdinalIgnoreCase))
     Log.Information("Added SSL mode requirement to connection string");
 }
 
+// Validate connection string format
+if (!connectionString.Contains("@") || !connectionString.Contains("/"))
+{
+    Log.Fatal("Connection string appears malformed. Missing @ or / separator.");
+    Log.Fatal("Full connection string (with credentials): {FullConnectionString}", connectionString);
+}
+
 // Log success (without exposing credentials)
 var safeConnStr = connectionString.Length > 20
     ? $"{connectionString.Substring(0, 20)}...({connectionString.Length} chars)"
