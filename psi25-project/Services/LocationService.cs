@@ -68,18 +68,7 @@ namespace psi25_project.Services
         
         public async Task<FallbackLocationDto?> GetOldestLocationAsync()
         {
-            var result = await _context.Locations
-                .OrderBy(l => l.LastPlayedAt)
-                .Select(l => new FallbackLocationDto
-                {
-                    id = l.Id,
-                    Longitude = l.Longitude,
-                    Latitude = l.Latitude,
-                    panoId = l.panoId,
-                })
-                .FirstOrDefaultAsync();
-
-            return result;
+            return await _locationRepository.GetOldest();
         }
     }
 }

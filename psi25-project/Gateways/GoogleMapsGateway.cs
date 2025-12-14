@@ -142,7 +142,7 @@ namespace psi25_project.Gateways
                 var lazyTask = _inFlightStreetViewRequests.GetOrAdd(
                     cacheKey,
                     key => new Lazy<Task<StreetViewLocationDto?>>(
-                        async () => await GetStreetViewMetadataAsyncInternal(lat, lng),
+                        async () => await GetStreetViewMetadataAsyncInternal(lat, lng, cancellationToken),
                         LazyThreadSafetyMode.ExecutionAndPublication
                     )
                 );
