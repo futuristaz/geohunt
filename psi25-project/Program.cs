@@ -219,23 +219,35 @@ using (var scope = app.Services.CreateScope())
     try
     {
         Log.Information("Testing database connection...");
-        Log.Information("Attempting to connect to database...");
-        var canConnect = await context.Database.CanConnectAsync();
-        if (!canConnect)
+        Log.Information("Attempting to open database connection...");
+
+        // Try to actually open a connection to get the real error
+        await using (var connection = context.Database.GetDbConnection())
         {
-            throw new InvalidOperationException("Database connection test failed - CanConnectAsync returned false");
+            await connection.OpenAsync();
+            Log.Information("Database connection opened successfully");
         }
+
         Log.Information("Database connection successful");
     }
     catch (Exception ex)
     {
-        Log.Fatal(ex, "Failed to connect to database. Error: {ErrorMessage}. Connection string length: {Length}",
-            ex.Message, connectionString?.Length ?? 0);
+        Log.Fatal(ex, "Failed to connect to database. Error: {ErrorMessage}", ex.Message);
         Log.Fatal("Exception type: {ExceptionType}", ex.GetType().FullName);
+
         if (ex.InnerException != null)
         {
-            Log.Fatal("Inner exception: {InnerException}", ex.InnerException.Message);
+            Log.Fatal("Inner exception: {InnerExceptionType} - {InnerMessage}",
+                ex.InnerException.GetType().FullName, ex.InnerException.Message);
         }
+
+        // Log additional details for PostgreSQL specific exceptions
+        if (ex is Npgsql.NpgsqlException npgsqlEx)
+        {
+            Log.Fatal("PostgreSQL error code: {ErrorCode}", npgsqlEx.ErrorCode);
+            Log.Fatal("PostgreSQL SQL state: {SqlState}", npgsqlEx.SqlState);
+        }
+
         throw;
     }
 
