@@ -30,9 +30,26 @@ builder.Services.AddMemoryCache(options =>
     options.SizeLimit = 10_000;
 });
 
-// Read connection string from environment variable (Render uses DATABASE_URL)
+// Read connection string - Render provides DATABASE_URL
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Validate connection string exists
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    var errorMsg = "Database connection string is missing or empty.\n" +
+                   "Checked: DATABASE_URL, ConnectionStrings__DefaultConnection environment variables.\n" +
+                   "Please verify environment variables in Render Dashboard > Service > Environment tab.";
+    Log.Fatal(errorMsg);
+    throw new InvalidOperationException(errorMsg);
+}
+
+// Log success (without exposing credentials)
+var safeConnStr = connectionString.Length > 20
+    ? $"{connectionString.Substring(0, 20)}...({connectionString.Length} chars)"
+    : "***";
+Log.Information("Database connection configured: {SafeConnectionString}", safeConnStr);
 
 builder.Services.AddDbContext<GeoHuntContext>(options =>
     options.UseNpgsql(connectionString));
@@ -175,6 +192,24 @@ app.UseStaticFiles();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<GeoHuntContext>();
+
+    // Validate database connection before attempting migration
+    try
+    {
+        Log.Information("Testing database connection...");
+        var canConnect = await context.Database.CanConnectAsync();
+        if (!canConnect)
+        {
+            throw new InvalidOperationException("Database connection test failed");
+        }
+        Log.Information("Database connection successful");
+    }
+    catch (Exception ex)
+    {
+        Log.Fatal(ex, "Failed to connect to database. Check DATABASE_URL environment variable format.");
+        throw;
+    }
+
     await context.Database.MigrateAsync();
     await AchievementSeeder.SeedAchievements(context);
 
