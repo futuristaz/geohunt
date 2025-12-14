@@ -5,7 +5,7 @@ namespace psi25_project.Gateways.Interfaces
 {
     public interface IGoogleMapsGateway
     {
-        Task<GeocodeResultDto> GetCoordinatesAsync(string address);
-        Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng);
+        Task<GeocodeResultDto> GetCoordinatesAsync(string address, CancellationToken cancellationToken = default);
+        Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng, CancellationToken cancellationToken = default);
     }
 }

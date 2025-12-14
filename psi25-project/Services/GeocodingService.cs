@@ -1,3 +1,4 @@
+using psi25_project.Gateways;
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -14,20 +15,51 @@ namespace psi25_project.Services
     {
         private readonly IGoogleMapsGateway _mapsGateway;
         private readonly IMemoryCache _cache;
+        private readonly ILocationService _locationService;
         private static readonly ConcurrentDictionary<string, Lazy<Task<GeocodeResultDto>>> _inFlightGeocodingRequests = new();
         private const int MaxTriesPerCity = 1000;
+        private const int TimeoutSeconds = 3;
 
-        public GeocodingService(IGoogleMapsGateway mapsGateway, IMemoryCache cache)
+        public GeocodingService(IGoogleMapsGateway mapsGateway, IMemoryCache cache, ILocationService locationService)
         {
             _mapsGateway = mapsGateway;
             _cache = cache;
+            _locationService = locationService;
         }
 
         private static string NormalizeAddressKey(string address) => address.ToLowerInvariant();
 
         public async Task<(bool success, object result)> GetValidCoordinatesAsync()
         {
-            while (true)
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
+
+            try
+            {
+                return await GetValidCoordinatesInternalAsync(cts.Token);
+            } catch (OperationCanceledException)
+            {
+                var locationfromDb = await _locationService.GetOldestLocationAsync();
+
+                if (locationfromDb == null) return (false, new { error = "Timeout: No locations available in the database" });
+
+                return (true, new
+                {
+                    locationfromDb.id,
+                    source = "database",
+                    address = "fallback",
+                    modifiedCoordinates = new
+                    {
+                        lat = locationfromDb.Latitude,
+                        lng = locationfromDb.Longitude
+                    },
+                    panoID = locationfromDb.panoId
+                });
+            }
+        }
+
+        private async Task<(bool success, object result)> GetValidCoordinatesInternalAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
             {
                 string address = AddressProvider.GetRandomAddress();
 
@@ -76,14 +108,17 @@ namespace psi25_project.Services
 
                 for (int attempt = 1; attempt <= MaxTriesPerCity; attempt++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     (lat, lng) = CoordinateModifier.ModifyCoordinates(lat, lng);
 
-                    StreetViewLocationDto? streetView = await _mapsGateway.GetStreetViewMetadataAsync(lat, lng);
+                    StreetViewLocationDto? streetView = await _mapsGateway.GetStreetViewMetadataAsync(lat, lng, cancellationToken);
 
                     if (streetView != null)
                     {
                         return (true, new
                         {
+                            source = "generated",
                             address,
                             modifiedCoordinates = new { lat, lng },
                             panoID = streetView.PanoId,
@@ -92,6 +127,9 @@ namespace psi25_project.Services
                     }
                 }
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            return (false, null); // this line should never be reached
         }
     }
 }

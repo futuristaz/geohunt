@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using psi25_project.Data;
 using psi25_project.Models;
+using psi25_project.Models.Dtos;
 using psi25_project.Repositories.Interfaces;
 
 namespace psi25_project.Repositories
@@ -52,6 +53,20 @@ namespace psi25_project.Repositories
         {
             _context.Locations.Update(location);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<FallbackLocationDto?> GetOldest()
+        {
+            return await _context.Locations
+                .OrderBy(l => l.LastPlayedAt)
+                .Select(l => new FallbackLocationDto
+                {
+                    id = l.Id,
+                    Longitude = l.Longitude,
+                    Latitude = l.Latitude,
+                    panoId = l.panoId,
+                })
+                .FirstOrDefaultAsync();
         }
     }
 }

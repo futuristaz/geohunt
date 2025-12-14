@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Routing.Tree;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -32,10 +33,10 @@ namespace psi25_project.Gateways
                           errorCode: "MISSING_API_KEY",
                           message: "Google Maps API key not found in configuration. Please set GoogleMaps:ApiKey.");
         }
-
+        
         private static string NormalizeCoordKey(double lat, double lng) => $"{lat:F6},{lng:F6}";
 
-        public async Task<GeocodeResultDto> GetCoordinatesAsync(string address)
+        public async Task<GeocodeResultDto> GetCoordinatesAsync(string address, CancellationToken cancellationToken = default)
         {
             string endpoint = "Geocoding API";
             string url = $"https://maps.googleapis.com/maps/api/geocode/json?address={Uri.EscapeDataString(address)}&key={_apiKey}";
@@ -44,8 +45,8 @@ namespace psi25_project.Gateways
 
             try
             {
-                HttpResponseMessage response = await _httpClient.GetAsync(url);
-                string content = await response.Content.ReadAsStringAsync();
+                HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
+                string content = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 // Check HTTP status
                 if (!response.IsSuccessStatusCode)
@@ -127,7 +128,7 @@ namespace psi25_project.Gateways
             }
         }
 
-        public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng)
+        public async Task<StreetViewLocationDto?> GetStreetViewMetadataAsync(double lat, double lng, CancellationToken cancellationToken = default)
         {
             // Use normalized cache key for both cache and in-flight tracking
             var cacheKey = NormalizeCoordKey(lat, lng);
@@ -141,7 +142,7 @@ namespace psi25_project.Gateways
                 var lazyTask = _inFlightStreetViewRequests.GetOrAdd(
                     cacheKey,
                     key => new Lazy<Task<StreetViewLocationDto?>>(
-                        async () => await GetStreetViewMetadataAsyncInternal(lat, lng),
+                        async () => await GetStreetViewMetadataAsyncInternal(lat, lng, cancellationToken),
                         LazyThreadSafetyMode.ExecutionAndPublication
                     )
                 );
@@ -167,7 +168,7 @@ namespace psi25_project.Gateways
             return result;
         }
 
-        private async Task<StreetViewLocationDto?> GetStreetViewMetadataAsyncInternal(double lat, double lng)
+        private async Task<StreetViewLocationDto?> GetStreetViewMetadataAsyncInternal(double lat, double lng, CancellationToken cancellationToken)
         {
             string endpoint = "Street View Metadata API";
             string url = $"https://maps.googleapis.com/maps/api/streetview/metadata?location={lat},{lng}&key={_apiKey}";
@@ -176,8 +177,8 @@ namespace psi25_project.Gateways
 
             try
             {
-                HttpResponseMessage response = await _httpClient.GetAsync(url);
-                string content = await response.Content.ReadAsStringAsync();
+                HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
+                string content = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 // Check HTTP status
                 if (!response.IsSuccessStatusCode)

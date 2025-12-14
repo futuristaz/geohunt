@@ -18,7 +18,8 @@ interface Coordinates {
 }
 
 interface GeocodingApiResponse {
-  id: number;
+  id?: number;
+  source: string;
   modifiedCoordinates: Coordinates;
   panoID: string;
 }
@@ -131,8 +132,8 @@ const StreetViewApp = () => {
       };
       tick();
     });
-
-  // ---- load a new location: fetch coords, init/retarget pano, persist Location ----
+  
+    // ---- load a new location: fetch coords, init/retarget pano, persist Location ----
   const applyLocationToPano = (position: Coordinates, locId: number) => {
     if (!panoRef.current) {
       panoRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current!, {
@@ -154,12 +155,14 @@ const StreetViewApp = () => {
     setLocationId(locId);
     setSelectedCoords(null);
   };
-
+  
   const fetchAndPersistLocation = async () => {
+    // Fetch coordinates
     const coordsRes = await fetch('/api/geocoding/valid_coords');
     await handleApiError(coordsRes, 'load Street View');
     const coordsData: GeocodingApiResponse = await coordsRes.json();
 
+    // Parse coordinates
     const lat = parseFloat(String(coordsData.modifiedCoordinates.lat));
     const lng = parseFloat(String(coordsData.modifiedCoordinates.lng));
     if (Number.isNaN(lat) || Number.isNaN(lng)) {
@@ -167,20 +170,29 @@ const StreetViewApp = () => {
     }
     const position: Coordinates = { lat, lng };
 
-    const locRes = await fetch('/api/Locations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ latitude: lat, longitude: lng, panoId: coordsData.panoID }),
-    });
-    await handleApiError(locRes, 'save location');
-    const locData = await locRes.json();
-
-    return { position, locationId: locData.id };
+    // Handle database fallback OR create new location
+    if (coordsData.source === 'database') {
+      console.log('Using fallback location from database');
+      await fetch(`/api/Locations/${coordsData.id}/last-played`, {
+        method: 'PATCH',
+      });
+      return { position, locationId: coordsData.id! };
+    } else {
+      console.log('Using generated location');
+      const locRes = await fetch('/api/Locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng, panoId: coordsData.panoID }),
+      });
+      await handleApiError(locRes, 'save location');
+      const locData = await locRes.json();
+      return { position, locationId: locData.id };
+    }
   };
-
+  
   const loadRoundLocation = async () => {
-    const { position, locationId: locId } = await fetchAndPersistLocation();
-    applyLocationToPano(position, locId);
+      const { position, locationId: locId } = await fetchAndPersistLocation();
+      applyLocationToPano(position, locId);
   };
 
   // ---- initial mount: wait for maps, mount pano and first round location ----

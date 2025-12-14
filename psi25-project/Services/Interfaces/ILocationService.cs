@@ -9,5 +9,6 @@ namespace psi25_project.Services
         Task<IEnumerable<object>> GetRecentLocationsAsync();
         Task<Location> CreateLocationAsync(LocationDto dto);
         Task<(bool success, object result, string? message)> UpdateLastPlayedAsync(int id);
+        Task<FallbackLocationDto?> GetOldestLocationAsync();
     }
 }

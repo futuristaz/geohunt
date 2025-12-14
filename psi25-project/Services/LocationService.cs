@@ -65,5 +65,10 @@ namespace psi25_project.Services
                 location.LastPlayedAt
             }, null);
         }
+        
+        public async Task<FallbackLocationDto?> GetOldestLocationAsync()
+        {
+            return await _locationRepository.GetOldest();
+        }
     }
 }
