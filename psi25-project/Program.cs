@@ -30,8 +30,12 @@ builder.Services.AddMemoryCache(options =>
     options.SizeLimit = 10_000;
 });
 
+// Read connection string from environment variable (Render uses DATABASE_URL)
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<GeoHuntContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IGameRepository, GameRepository>();
