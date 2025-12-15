@@ -4,13 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>GeoHunt</title>
+    <script>
+      // Fetch the Google Maps API key from the backend and load the Google Maps script
+      fetch('/api/config/public')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch configuration');
+          }
+          return response.json();
+        })
+        .then(config => {
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleMapsApiKey}&loading=async`;
+          script.async = true;
+          script.defer = true;
+          document.head.appendChild(script);
+        })
+        .catch(error => {
+          console.error('Failed to load Google Maps configuration:', error);
+        });
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script async
-      src="https://maps.googleapis.com/maps/api/js?key=<api_key>&loading=async">
-    </script>
   </body>
 </html>
