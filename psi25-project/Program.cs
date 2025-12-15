@@ -45,6 +45,11 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException(errorMsg);
 }
 
+// DEBUG: Log the raw connection string length and content
+Log.Information("DEBUG: Raw connection string length: {Length}", connectionString.Length);
+Log.Information("DEBUG: Raw connection string ends with: '{Ending}'",
+    connectionString.Length > 20 ? connectionString.Substring(connectionString.Length - 20) : connectionString);
+
 // Normalize Render's postgres:// to postgresql:// for Npgsql compatibility
 if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
     !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
@@ -54,13 +59,27 @@ if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCas
 }
 
 // Add SSL mode if not present (Render requires SSL)
-// Use NpgsqlConnectionStringBuilder to properly construct the connection string
-var connStringBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
-if (connStringBuilder.SslMode == Npgsql.SslMode.Disable || !connectionString.Contains("sslmode", StringComparison.OrdinalIgnoreCase))
+if (!connectionString.Contains("sslmode", StringComparison.OrdinalIgnoreCase))
 {
-    connStringBuilder.SslMode = Npgsql.SslMode.Require;
-    connectionString = connStringBuilder.ConnectionString;
-    Log.Information("Added SslMode=Require using NpgsqlConnectionStringBuilder");
+    // Check if URI format or key=value format
+    if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+        connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+    {
+        // URI format - append query parameter
+        var separator = connectionString.Contains("?") ? "&" : "?";
+        var beforeLength = connectionString.Length;
+        connectionString = $"{connectionString}{separator}sslmode=require";
+        Log.Information("Added ?sslmode=require to URI connection string");
+        Log.Information("DEBUG: Connection string length before: {Before}, after: {After}", beforeLength, connectionString.Length);
+        Log.Information("DEBUG: Last 30 chars of connection string: '{Ending}'",
+            connectionString.Length > 30 ? connectionString.Substring(connectionString.Length - 30) : connectionString);
+    }
+    else
+    {
+        // Key=value format - append parameter
+        connectionString = $"{connectionString};SslMode=Require";
+        Log.Information("Added SslMode=Require to key=value connection string");
+    }
 }
 
 // Validate connection string format
