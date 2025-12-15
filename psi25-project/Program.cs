@@ -57,8 +57,8 @@ if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCas
 if (!connectionString.Contains("sslmode=", StringComparison.OrdinalIgnoreCase))
 {
     var separator = connectionString.Contains("?") ? "&" : "?";
-    connectionString += $"{separator}sslmode=Require";
-    Log.Information("Added SSL mode requirement to connection string");
+    connectionString += $"{separator}sslmode=require";
+    Log.Information("Added sslmode=require to connection string");
 }
 
 // Validate connection string format
