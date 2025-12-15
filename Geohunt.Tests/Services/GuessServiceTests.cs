@@ -92,17 +92,16 @@ public class GuessServiceTests
         Assert.Equal(dto.DistanceKm, capturedGuess.DistanceKm);
         Assert.Equal(dto.Score, capturedGuess.Score);
 
-        // Assert – game updates
-        Assert.Equal(2, game.CurrentRound);      // 1 -> 2
-        Assert.Equal(100, game.TotalScore);      // 0 + 100
+        // Assert
+        Assert.Equal(2, game.CurrentRound);    
+        Assert.Equal(100, game.TotalScore);    
         Assert.Null(game.FinishedAt);
 
-        // Assert – tuple return
+        // Assert
         Assert.False(finished);
         Assert.Equal(game.CurrentRound, currentRound);
         Assert.Equal(game.TotalScore, totalScore);
 
-        // Assert – mapping via MapToDto
         Assert.Equal(capturedGuess.Id, guessDto.Id);
         Assert.Equal(capturedGuess.GameId, guessDto.GameId);
         Assert.Equal(capturedGuess.LocationId, guessDto.LocationId);
@@ -116,7 +115,7 @@ public class GuessServiceTests
             s => s.OnRoundSubmittedAsync(
                 game.UserId,
                 game.Id,
-                1, // roundNumber
+                1,
                 dto.DistanceKm,
                 dto.Score),
             Times.Once);
@@ -211,7 +210,6 @@ public class GuessServiceTests
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
 
-        // First guess
         Assert.Equal(guesses[0].Id, result[0].Id);
         Assert.Equal(guesses[0].GameId, result[0].GameId);
         Assert.Equal(guesses[0].LocationId, result[0].LocationId);
@@ -221,7 +219,6 @@ public class GuessServiceTests
         Assert.Equal(location1.Latitude, result[0].ActualLatitude);
         Assert.Equal(location1.Longitude, result[0].ActualLongitude);
 
-        // Second guess
         Assert.Equal(guesses[1].Id, result[1].Id);
         Assert.Equal(location2.Latitude, result[1].ActualLatitude);
         Assert.Equal(location2.Longitude, result[1].ActualLongitude);
@@ -249,8 +246,8 @@ public class GuessServiceTests
             UserId = Guid.NewGuid(),
             User = null!,
             FinishedAt = null,
-            CurrentRound = 3,  // Last round
-            TotalRounds = 3,   // Total rounds
+            CurrentRound = 3, 
+            TotalRounds = 3,
             TotalScore = 200
         };
 
@@ -321,31 +318,30 @@ public class GuessServiceTests
         // Act
         var (guessDto, finished, currentRound, totalScore, unlockedAchievements) = await _service.CreateGuessAsync(dto);
 
-        // Assert – game is finished
+        // Assert
         Assert.NotNull(game.FinishedAt);
         Assert.True(game.FinishedAt <= DateTime.UtcNow);
         Assert.True(game.FinishedAt >= DateTime.UtcNow.AddSeconds(-5));
-        Assert.Equal(300, game.TotalScore);  // 200 + 100
-        Assert.Equal(3, game.CurrentRound);  // Should stay at 3, not increment
+        Assert.Equal(300, game.TotalScore);  
+        Assert.Equal(3, game.CurrentRound); 
 
-        // Assert – tuple return
+        // Assert
         Assert.True(finished);
         Assert.Equal(game.CurrentRound, currentRound);
         Assert.Equal(game.TotalScore, totalScore);
 
-        // Assert – achievements
+        // Assert 
         Assert.NotNull(unlockedAchievements);
         Assert.Equal(2, unlockedAchievements.Count);
         Assert.Contains(unlockedAchievements, a => a.Code == "PERFECT_ROUND");
         Assert.Contains(unlockedAchievements, a => a.Code == "GAME_MASTER");
 
-        // Verify OnGameFinishedAsync was called
         _achievementService.Verify(
             s => s.OnGameFinishedAsync(
                 game.UserId,
                 game.Id,
-                300,  // totalScore
-                3),   // totalRounds
+                300, 
+                3),
             Times.Once);
     }
 
@@ -511,9 +507,9 @@ public class GuessServiceTests
             {
                 UserId = game.UserId,
                 AchievementId = 2,
-                Achievement = null!  // Null achievement
+                Achievement = null!  
             },
-            null!  // Null UserAchievement
+            null!
         };
 
         _achievementService
@@ -528,7 +524,7 @@ public class GuessServiceTests
         // Act
         var (guessDto, finished, currentRound, totalScore, unlockedAchievements) = await _service.CreateGuessAsync(dto);
 
-        // Assert - should only have 1 valid achievement
+        // Assert 
         Assert.NotNull(unlockedAchievements);
         Assert.Single(unlockedAchievements);
         Assert.Equal("VALID_ACH", unlockedAchievements[0].Code);

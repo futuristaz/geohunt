@@ -1,6 +1,5 @@
 using psi25_project.Models;
 using psi25_project.Services;
-using psi25_project.Data;
 
 namespace Geohunt.Tests.Services;
 public class AchievementServiceLogicTests

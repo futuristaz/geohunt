@@ -2,7 +2,6 @@ using Moq;
 using psi25_project.Models.Dtos;
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Services;
-using Xunit;
 
 namespace Geohunt.Tests.Services;
 

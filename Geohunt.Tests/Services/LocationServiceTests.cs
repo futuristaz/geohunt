@@ -4,7 +4,6 @@ using psi25_project.Models.Dtos;
 using psi25_project.Repositories.Interfaces;
 using psi25_project.Services;
 using psi25_project.Utils;
-using Xunit;
 
 namespace Geohunt.Tests.Services
 {

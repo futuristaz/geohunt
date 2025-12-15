@@ -1,16 +1,11 @@
 using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using psi25_project.Gateways;
-using psi25_project.Models.Dtos;
 using psi25_project.Exceptions;
-using Xunit;
 
 namespace Geohunt.Tests.Gateways
 {

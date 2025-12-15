@@ -3,9 +3,6 @@ using Moq;
 using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Services;
-using Xunit;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Geohunt.Tests.Controllers
 {

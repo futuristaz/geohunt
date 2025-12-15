@@ -4,7 +4,6 @@ using psi25_project.Controllers;
 using psi25_project.Models.Dtos;
 using psi25_project.Models;
 using psi25_project.Services.Interfaces;
-using Xunit;
 
 namespace Geohunt.Tests.Controllers
 {
@@ -39,7 +38,6 @@ namespace Geohunt.Tests.Controllers
             var okResult = Assert.IsType<OkObjectResult>(result);
             var value = okResult.Value;
 
-            // Access properties using reflection because Value is anonymous
             var initialCoords = (Coordinate)value.GetType().GetProperty("initialCoords")!.GetValue(value)!;
             var guessedCoords = (Coordinate)value.GetType().GetProperty("guessedCoords")!.GetValue(value)!;
 

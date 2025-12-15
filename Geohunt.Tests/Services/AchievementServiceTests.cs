@@ -47,7 +47,6 @@ public class AchievementServiceTests
                 TotalGuesses = 0
             });
 
-        // First call - check for already unlocked (returns empty)
         _achievementRepo
             .Setup(r => r.GetUnlockedAsync(userId, It.IsAny<IEnumerable<int>>()))
             .ReturnsAsync(new List<UserAchievement>());
@@ -56,11 +55,10 @@ public class AchievementServiceTests
             .Setup(r => r.AddNewlyUnlockedAchievementsAsync(It.IsAny<List<UserAchievement>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        // Second call - reload with full data (returns the unlocked achievement)
         _achievementRepo
             .SetupSequence(r => r.GetUnlockedAsync(userId, It.IsAny<IEnumerable<int>>()))
-            .ReturnsAsync(new List<UserAchievement>()) // First call
-            .ReturnsAsync(new List<UserAchievement>    // Second call
+            .ReturnsAsync(new List<UserAchievement>()) 
+            .ReturnsAsync(new List<UserAchievement>
             {
                 new UserAchievement
                 {
@@ -123,11 +121,10 @@ public class AchievementServiceTests
             .Setup(r => r.AddNewlyUnlockedAchievementsAsync(It.IsAny<List<UserAchievement>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        // Second call - reload with full data (returns the unlocked achievement)
         _achievementRepo
             .SetupSequence(r => r.GetUnlockedAsync(userId, It.IsAny<IEnumerable<int>>()))
-            .ReturnsAsync(new List<UserAchievement>()) // First call
-            .ReturnsAsync(new List<UserAchievement>    // Second call
+            .ReturnsAsync(new List<UserAchievement>()) 
+            .ReturnsAsync(new List<UserAchievement>
             {
                 new UserAchievement
                 {
@@ -185,14 +182,12 @@ public class AchievementServiceTests
                 TotalGuesses = 10 // not first guess
             });
 
-        // no setup for GetUnlockedAsync / AddNewlyUnlockedAchievementsAsync on purpose
-
         // Act
         var result = await _service.OnRoundSubmittedAsync(
             userId, gameId,
             roundNumber: 1,
-            distanceKm: 5.0,   // far, so no distance-based achievements
-            score: 0);         // score irrelevant here
+            distanceKm: 5.0,
+            score: 0);
 
         // Assert
         Assert.Empty(result);
@@ -345,11 +340,10 @@ public class AchievementServiceTests
             .Setup(r => r.AddNewlyUnlockedAchievementsAsync(It.IsAny<List<UserAchievement>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        // Second call - reload with full data (returns the unlocked achievement)
         _achievementRepo
             .SetupSequence(r => r.GetUnlockedAsync(userId, It.IsAny<IEnumerable<int>>()))
-            .ReturnsAsync(new List<UserAchievement>()) // First call
-            .ReturnsAsync(new List<UserAchievement>    // Second call
+            .ReturnsAsync(new List<UserAchievement>()) 
+            .ReturnsAsync(new List<UserAchievement>
             {
                 new UserAchievement
                 {
@@ -415,8 +409,8 @@ public class AchievementServiceTests
 
         _achievementRepo
             .SetupSequence(r => r.GetUnlockedAsync(userId, It.IsAny<IEnumerable<int>>()))
-            .ReturnsAsync(new List<UserAchievement>()) // first call: already unlocked -> none
-            .ReturnsAsync(new List<UserAchievement>    // second call: reload new unlocks
+            .ReturnsAsync(new List<UserAchievement>())
+            .ReturnsAsync(new List<UserAchievement> 
             {
                 new UserAchievement
                 {
@@ -500,7 +494,6 @@ public class AchievementServiceTests
             .Setup(r => r.GetActiveByCodesAsync(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(gameAchievements);
 
-        // Guesses that do NOT satisfy clean sweep (count != totalRounds OR distances > 1km)
         _guessRepo
             .Setup(r => r.GetGuessesByGameAsync(gameId))
             .ReturnsAsync(new List<Guess>
@@ -509,7 +502,6 @@ public class AchievementServiceTests
                 new() { DistanceKm = 2.0, Game = null!, Location = null! }
             });
 
-        // Stats that do NOT hit marathoner or streak master
         _userStatsRepo
             .Setup(r => r.GetOrCreateAsync(userId))
             .ReturnsAsync(new UserStats
@@ -522,17 +514,15 @@ public class AchievementServiceTests
                 BestGameScore = 1000
             });
         
-        // Act: low score, mismatched totalRounds so conditions fail
         var result = await _service.OnGameFinishedAsync(
             userId,
             gameId,
-            totalScore: 5000,   // < 10_000, so Score10k won't trigger
-            totalRounds: 5);    // != guesses.Count(), so CleanSweep won't trigger
+            totalScore: 5000,   
+            totalRounds: 5);  
 
         // Assert
         Assert.Empty(result);
 
-        // No unlock flow should occur because no achievement codes were produced
         _achievementRepo.Verify(
             r => r.AddNewlyUnlockedAchievementsAsync(
                 It.IsAny<List<UserAchievement>>(),
@@ -571,7 +561,6 @@ public class AchievementServiceTests
             BestGameScore = 500
         };
 
-        // Snapshot values before the service mutates the object
         var originalTotalGames = initialStats.TotalGames;
         var originalBestGameScore = initialStats.BestGameScore;
 
@@ -599,15 +588,12 @@ public class AchievementServiceTests
         _userStatsRepo.Verify(r => r.UpdateAsync(It.IsAny<UserStats>()), Times.Once);
         Assert.NotNull(updatedStats);
 
-        // Use the SNAPSHOTS, not initialStats.* (which is now mutated)
         Assert.Equal(originalTotalGames + 1, updatedStats!.TotalGames);
         Assert.Equal(newScore, updatedStats.BestGameScore);
 
-        // Light sanity checks for streak/last played
         Assert.NotNull(updatedStats.LastPlayedDateUtc);
         Assert.True(updatedStats.CurrentStreakDays >= 1);
 
-        // Still no unlock flow
         _achievementRepo.Verify(
             r => r.AddNewlyUnlockedAchievementsAsync(
                 It.IsAny<List<UserAchievement>>(),
@@ -674,7 +660,6 @@ public class AchievementServiceTests
         Assert.NotNull(result);
         Assert.Equal(achievements.Count, result.Count);
 
-        // Verify each DTO matches the corresponding entity
         for (int i = 0; i < achievements.Count; i++)
         {
             Assert.Equal(achievements[i].Code, result[i].Code);
@@ -682,7 +667,6 @@ public class AchievementServiceTests
             Assert.Equal(achievements[i].Description, result[i].Description);
         }
 
-        // Verify no extra fields are populated (check first item as representative)
         Assert.Null(result[0].UnlockedAt);
     }
 
@@ -694,9 +678,7 @@ public class AchievementServiceTests
 
         _achievementRepo
             .SetupSequence(r => r.GetAchievementsForUserAsync(userId))
-            // First call: repository returns null
             .ReturnsAsync(new List<UserAchievement>())
-            // Second call: repository returns empty list
             .ReturnsAsync(new List<UserAchievement>());
 
         // Act
