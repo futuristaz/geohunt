@@ -1,10 +1,5 @@
 import { useEffect, useRef } from "react";
-
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import { waitForGoogleMapsApi } from "../lib/googleMaps";
 
 type LatLng = { lat: number; lng: number };
 
@@ -31,10 +26,12 @@ export default function RoundResultMap({
     let polyline: google.maps.Polyline | null = null;
     let retry: number | null = null;
 
-    const init = () => {
+    const init = async () => {
       if (!mapRef.current) return;
-      if (!window.google?.maps) {
-        retry = window.setTimeout(init, 120);
+      try {
+        await waitForGoogleMapsApi({ timeoutMs: 15000 });
+      } catch {
+        retry = window.setTimeout(() => void init(), 120);
         return;
       }
 
@@ -117,7 +114,7 @@ export default function RoundResultMap({
       }
     };
 
-    init();
+    void init();
 
     return () => {
       if (retry !== null) window.clearTimeout(retry);

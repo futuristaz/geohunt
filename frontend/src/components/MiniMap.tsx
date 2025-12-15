@@ -1,12 +1,7 @@
 // src/components/MiniMap.tsx
 /// <reference types="google.maps" />
 import { useEffect, useRef, useState } from "react";
-
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import { waitForGoogleMapsApi } from "../lib/googleMaps";
 
 type LatLngLiteral = google.maps.LatLngLiteral;
 
@@ -18,26 +13,6 @@ type MiniMapProps = {
   style?: React.CSSProperties;
   minZoomOnSelect?: number;
 };
-
-function waitForGoogleMaps(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // If already loaded, resolve immediately
-    if (window.google?.maps) {
-      return resolve();
-    }
-
-    const startTime = Date.now();
-    const checkInterval = setInterval(() => {
-      if (window.google?.maps) {
-        clearInterval(checkInterval);
-        resolve();
-      } else if (Date.now() - startTime > 10000) {
-        clearInterval(checkInterval);
-        reject(new Error('Google Maps failed to load within 10 seconds'));
-      }
-    }, 100);
-  });
-}
 
 export default function MiniMap({
   onSelect,
@@ -106,14 +81,18 @@ export default function MiniMap({
 
     (async () => {
       try {
-        await waitForGoogleMaps();
+        await waitForGoogleMapsApi({ timeoutMs: 15000 });
 
         if (cancelled) {
           return;
         }
 
+        // In some render paths the ref can be late; wait one frame before failing.
         if (!containerRef.current) {
-          throw new Error('Container ref not available');
+          await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        }
+        if (!containerRef.current) {
+          throw new Error("Container ref not available");
         }
 
         mapRef.current = new window.google.maps.Map(containerRef.current, {

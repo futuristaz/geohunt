@@ -122,6 +122,10 @@ dotnet test Geohunt.Tests/Geohunt.Tests.csproj
 
 Notes
 - The backend uses user secrets (UserSecretsId is present) and appsettings files for configuration. Set your DB connection string and API keys via environment variables or user secrets during local development.
+- Google Maps API keys:
+  - `GoogleMaps__ClientApiKey`: used by the browser to load the Maps JavaScript API (use HTTP referrer restrictions, e.g. your Render domain).
+  - `GoogleMaps__ServerApiKey`: used by the backend for Geocoding + Street View Metadata calls (do not use HTTP referrer restrictions; use IP restrictions or leave unrestricted).
+  - `GoogleMaps__ApiKey` still works as a fallback for both, but it’s not recommended for production because browser and server typically need different restriction types.
 - If you prefer `pnpm` or `yarn`, substitute `npm install` with your package manager of choice inside the `frontend/` folder.
 
 ## 🤝 Contributing
@@ -132,4 +136,3 @@ By:
 - Mažvydas Peleckas https://github.com/mazvydiekas
 - Rokas Sirvydis https://github.com/R0ckguy
 - Aidija Rubliauskaitė https://github.com/aidijarub
-

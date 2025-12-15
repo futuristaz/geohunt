@@ -26,11 +26,13 @@ namespace psi25_project.Gateways
             _httpClient = httpClient;
             _logger = logger;
             _cache = cache;
-            _apiKey = configuration["GoogleMaps:ApiKey"]
+            // Use a dedicated server-side key when available (Geocoding/Street View Metadata are called from the backend).
+            _apiKey = configuration["GoogleMaps:ServerApiKey"]
+                      ?? configuration["GoogleMaps:ApiKey"]
                       ?? throw new GoogleMapsApiException(
                           endpoint: "Configuration",
                           errorCode: "MISSING_API_KEY",
-                          message: "Google Maps API key not found in configuration. Please set GoogleMaps:ApiKey.");
+                          message: "Google Maps API key not found in configuration. Please set GoogleMaps:ServerApiKey (or GoogleMaps:ApiKey as a fallback).");
         }
 
         private static string NormalizeCoordKey(double lat, double lng) => $"{lat:F6},{lng:F6}";

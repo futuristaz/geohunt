@@ -3,12 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import * as signalR from "@microsoft/signalr";
 import MiniMap from "../components/MiniMap";
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
-
 interface Coordinates {
   lat: number;
   lng: number;

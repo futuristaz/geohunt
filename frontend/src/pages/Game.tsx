@@ -1,16 +1,11 @@
 // src/pages/Game.tsx (StreetViewApp)
-declare global {
-  interface Window {
-    google: any;
-  }
-}
-
 import { useEffect, useRef, useState } from 'react';
 import MiniMap from '../components/MiniMap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RoundResultMap from '../components/RoundResultMap';
 import { AchievementPopup } from '../components/AchievementPopup';
 import type { AchievementDisplay, UserAchievementApi } from '../types/achievements';
+import { waitForGoogleMapsApi } from '../lib/googleMaps';
 
 interface Coordinates {
   lat: number;
@@ -119,19 +114,6 @@ const StreetViewApp = () => {
     setTotalRounds(s.totalRounds ?? 3);
   }, [location.state, navigate]);
 
-  // ---- utility: wait for Google Maps ----
-  const waitGoogleMaps = () =>
-    new Promise<void>((resolve, reject) => {
-      const start = Date.now();
-      const tick = () => {
-        if (window.google?.maps) return resolve();
-        if (Date.now() - start > 15000)
-          return reject(new Error('Google Maps API not loaded'));
-        setTimeout(tick, 100);
-      };
-      tick();
-    });
-
   // ---- load a new location: fetch coords, init/retarget pano, persist Location ----
   const applyLocationToPano = (position: Coordinates, locId: number) => {
     if (!panoRef.current) {
@@ -200,7 +182,7 @@ const StreetViewApp = () => {
 
     (async () => {
       try {
-        await waitGoogleMaps();
+        await waitForGoogleMapsApi({ timeoutMs: 15000 });
         if (!streetViewRef.current) throw new Error('Street View container not mounted');
         await loadRoundLocation();
         setLoading(false);

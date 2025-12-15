@@ -21,8 +21,13 @@ public class ConfigController : ControllerBase
     public IActionResult GetPublicConfig()
     {
         // Try multiple possible configuration paths
-        var googleMapsApiKey = _configuration["GoogleMaps:ApiKey"]
+        // Expose only the client-side key to the browser.
+        // The backend uses a separate key (`GoogleMaps:ServerApiKey`) for server-to-server calls.
+        var googleMapsApiKey = _configuration["GoogleMaps:ClientApiKey"]
+            ?? _configuration["GoogleMaps:ApiKey"]
+            ?? _configuration["GoogleMaps__ClientApiKey"]
             ?? _configuration["GoogleMaps__ApiKey"]
+            ?? Environment.GetEnvironmentVariable("GoogleMaps__ClientApiKey")
             ?? Environment.GetEnvironmentVariable("GoogleMaps__ApiKey");
 
         Log.Information("Config endpoint called. API Key present: {HasKey}", !string.IsNullOrEmpty(googleMapsApiKey));

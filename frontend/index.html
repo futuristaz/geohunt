@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GeoHunt</title>
     <script>
+      // Provide a shared promise so React code can await Google Maps readiness reliably.
+      // (With `loading=async`, the script `onload` can fire before Maps constructors are available.)
+      window.__googleMapsReady =
+        window.__googleMapsReady ||
+        new Promise((resolve, reject) => {
+          window.__resolveGoogleMapsReady = resolve;
+          window.__rejectGoogleMapsReady = reject;
+        });
+
       // Fetch the Google Maps API key from the backend and load the Google Maps script
       console.log('Fetching Google Maps API configuration...');
       fetch('/api/config/public')
@@ -21,17 +30,29 @@
           if (!config.googleMapsApiKey) {
             throw new Error('API key is missing in configuration response');
           }
+
+          // Called by the Google Maps script when the API is fully initialized.
+          window.__onGoogleMapsLoaded = () => {
+            console.log('Google Maps API initialized (callback)');
+            window.__resolveGoogleMapsReady?.();
+            window.dispatchEvent(new Event('google-maps-ready'));
+          };
+
           const script = document.createElement('script');
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleMapsApiKey}&loading=async`;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleMapsApiKey}&v=weekly&loading=async&callback=__onGoogleMapsLoaded`;
           script.async = true;
           script.defer = true;
           script.onload = () => console.log('Google Maps script loaded successfully');
-          script.onerror = (err) => console.error('Failed to load Google Maps script', err);
+          script.onerror = (err) => {
+            console.error('Failed to load Google Maps script', err);
+            window.__rejectGoogleMapsReady?.(new Error('Failed to load Google Maps script'));
+          };
           document.head.appendChild(script);
           console.log('Google Maps script tag added to page');
         })
         .catch(error => {
           console.error('Failed to load Google Maps configuration:', error);
+          window.__rejectGoogleMapsReady?.(error);
         });
     </script>
   </head>
