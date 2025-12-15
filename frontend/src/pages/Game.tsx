@@ -144,6 +144,16 @@ const StreetViewApp = () => {
         imageDateControl: false,
         showRoadLabels: false,
       });
+
+      // Add error handler for Street View load failures
+      window.google.maps.event.addListener(panoRef.current, 'status_changed', () => {
+        const status = panoRef.current.getStatus();
+        if (status !== 'OK') {
+          console.warn('Street View status:', status, 'for position:', position);
+          // Street View not available at this location, but we can still play
+          setError(null); // Clear any previous errors
+        }
+      });
     } else {
       panoRef.current.setPosition(position);
       panoRef.current.setPov({ heading: 0, pitch: 0 });
