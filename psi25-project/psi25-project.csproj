@@ -28,4 +28,11 @@
     <InternalsVisibleTo Include="Geohunt.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="addresses.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

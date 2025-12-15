@@ -50,6 +50,7 @@ frontend/dist/
 
 # Backend publish output
 psi25-project/publish/
+.tmp_publish/
 
 # Environment files with secrets
 .env
