@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace psi25_project.Controllers;
 
@@ -19,10 +20,16 @@ public class ConfigController : ControllerBase
     [HttpGet("public")]
     public IActionResult GetPublicConfig()
     {
-        var googleMapsApiKey = _configuration["GoogleMaps__ApiKey"];
+        // Try multiple possible configuration paths
+        var googleMapsApiKey = _configuration["GoogleMaps:ApiKey"]
+            ?? _configuration["GoogleMaps__ApiKey"]
+            ?? Environment.GetEnvironmentVariable("GoogleMaps__ApiKey");
+
+        Log.Information("Config endpoint called. API Key present: {HasKey}", !string.IsNullOrEmpty(googleMapsApiKey));
 
         if (string.IsNullOrEmpty(googleMapsApiKey))
         {
+            Log.Warning("Google Maps API key is not configured in any expected location");
             return StatusCode(500, new { error = "Google Maps API key is not configured" });
         }
 
