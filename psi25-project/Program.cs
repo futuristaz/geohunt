@@ -14,6 +14,7 @@ using psi25_project.Middleware;
 using psi25_project.Configuration;
 using Serilog;
 using psi25_project.Hubs;
+using Npgsql;
 
 Log.Logger = LoggingConfiguration.CreateLogger();
 
@@ -31,12 +32,12 @@ builder.Services.AddMemoryCache(options =>
 });
 
 // Read connection string - Render provides DATABASE_URL
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
 // Validate connection string exists
-if (string.IsNullOrWhiteSpace(connectionString))
+if (string.IsNullOrWhiteSpace(rawConnectionString))
 {
     var errorMsg = "Database connection string is missing or empty.\n" +
                    "Checked: DATABASE_URL, ConnectionStrings__DefaultConnection environment variables.\n" +
@@ -46,52 +47,81 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 // DEBUG: Log the raw connection string length and content
-Log.Information("DEBUG: Raw connection string length: {Length}", connectionString.Length);
+Log.Information("DEBUG: Raw connection string length: {Length}", rawConnectionString.Length);
 Log.Information("DEBUG: Raw connection string ends with: '{Ending}'",
-    connectionString.Length > 20 ? connectionString.Substring(connectionString.Length - 20) : connectionString);
+    rawConnectionString.Length > 20 ? rawConnectionString[^20..] : rawConnectionString);
 
-// Normalize Render's postgres:// to postgresql:// for Npgsql compatibility
-if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
-    !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+// Normalize Render's postgres:// to postgresql:// for compatibility
+var normalizedConnectionString = rawConnectionString;
+if (normalizedConnectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+    !normalizedConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
 {
-    connectionString = "postgresql://" + connectionString.Substring("postgres://".Length);
+    normalizedConnectionString = "postgresql://" + normalizedConnectionString.Substring("postgres://".Length);
     Log.Information("Normalized connection string from postgres:// to postgresql://");
 }
 
-// Add SSL mode if not present (Render requires SSL)
-if (!connectionString.Contains("sslmode", StringComparison.OrdinalIgnoreCase))
+// Build a safe Npgsql connection string (convert URI to key=value)
+NpgsqlConnectionStringBuilder npgsqlBuilder;
+try
 {
-    // Check if URI format or key=value format
-    if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-        connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+    if (normalizedConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
     {
-        // URI format - append query parameter
-        var separator = connectionString.Contains("?") ? "&" : "?";
-        var beforeLength = connectionString.Length;
-        connectionString = $"{connectionString}{separator}sslmode=require";
-        Log.Information("Added ?sslmode=require to URI connection string");
-        Log.Information("DEBUG: Connection string length before: {Before}, after: {After}", beforeLength, connectionString.Length);
-        Log.Information("DEBUG: Last 30 chars of connection string: '{Ending}'",
-            connectionString.Length > 30 ? connectionString.Substring(connectionString.Length - 30) : connectionString);
+        var uri = new Uri(normalizedConnectionString);
+        var userInfoParts = uri.UserInfo.Split(':', 2);
+        var username = userInfoParts.Length > 0 ? Uri.UnescapeDataString(userInfoParts[0]) : string.Empty;
+        var password = userInfoParts.Length > 1 ? Uri.UnescapeDataString(userInfoParts[1]) : string.Empty;
+
+        npgsqlBuilder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            Username = username,
+            Password = password
+        };
+
+        // Copy query params (if any) into the builder
+        if (!string.IsNullOrEmpty(uri.Query))
+        {
+            var query = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var pair in query)
+            {
+                var kv = pair.Split('=', 2);
+                if (kv.Length == 2 && !string.IsNullOrWhiteSpace(kv[0]))
+                {
+                    npgsqlBuilder[kv[0]] = Uri.UnescapeDataString(kv[1]);
+                }
+            }
+        }
     }
     else
     {
-        // Key=value format - append parameter
-        connectionString = $"{connectionString};SslMode=Require";
-        Log.Information("Added SslMode=Require to key=value connection string");
+        // Already key=value style
+        npgsqlBuilder = new NpgsqlConnectionStringBuilder(normalizedConnectionString);
     }
 }
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Failed to parse database connection string.");
+    throw;
+}
+
+// Enforce SSL for Render (and accept their cert)
+npgsqlBuilder.SslMode = SslMode.Require;
+npgsqlBuilder.TrustServerCertificate = true;
+
+var finalConnectionString = npgsqlBuilder.ConnectionString;
 
 // Validate connection string format
-if (!connectionString.Contains("@") || !connectionString.Contains("/"))
+if (string.IsNullOrWhiteSpace(npgsqlBuilder.Host) || string.IsNullOrWhiteSpace(npgsqlBuilder.Database))
 {
-    Log.Fatal("Connection string appears malformed. Missing @ or / separator.");
-    Log.Fatal("Full connection string (with credentials): {FullConnectionString}", connectionString);
+    Log.Fatal("Connection string appears malformed. Missing host or database.");
+    Log.Fatal("Full connection string (with credentials): {FullConnectionString}", finalConnectionString);
 }
 
 // Log success (without exposing credentials)
-var safeConnStr = connectionString.Length > 20
-    ? $"{connectionString.Substring(0, 20)}...({connectionString.Length} chars)"
+var safeConnStr = finalConnectionString.Length > 20
+    ? $"{finalConnectionString.Substring(0, 20)}...({finalConnectionString.Length} chars)"
     : "***";
 Log.Information("Database connection configured: {SafeConnectionString}", safeConnStr);
 
@@ -102,7 +132,7 @@ var source = Environment.GetEnvironmentVariable("DATABASE_URL") != null ? "DATAB
 Log.Information("Connection string source: {Source}", source);
 
 builder.Services.AddDbContext<GeoHuntContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(finalConnectionString));
 
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IGameRepository, GameRepository>();
@@ -314,4 +344,3 @@ finally
 }
 
 public partial class Program { }
-
