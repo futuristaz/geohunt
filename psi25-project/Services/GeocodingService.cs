@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using psi25_project.Gateways.Interfaces;
 using psi25_project.Models.Dtos;
@@ -31,15 +28,12 @@ namespace psi25_project.Services
             {
                 string address = AddressProvider.GetRandomAddress();
 
-                // Use normalized cache key for both cache and in-flight tracking
                 var cacheKey = NormalizeAddressKey(address);
 
                 GeocodeResultDto? coords;
 
-                // Check cache first
                 if (!_cache.TryGetValue(cacheKey, out coords))
                 {
-                    // Deduplicate in-flight requests using Lazy<Task<T>>
                     var lazyTask = _inFlightGeocodingRequests.GetOrAdd(
                         cacheKey,
                         key => new Lazy<Task<GeocodeResultDto>>(
@@ -52,7 +46,6 @@ namespace psi25_project.Services
                     {
                         coords = await lazyTask.Value;
 
-                        // Store in cache
                         _cache.Set(cacheKey, coords, new MemoryCacheEntryOptions
                         {
                             AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
@@ -61,7 +54,6 @@ namespace psi25_project.Services
                     }
                     finally
                     {
-                        // Always remove from in-flight tracking
                         _inFlightGeocodingRequests.TryRemove(cacheKey, out _);
                     }
                 }

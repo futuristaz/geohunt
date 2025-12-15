@@ -13,7 +13,7 @@ public static class DistanceCalculator
 
     public static double CalculateHaversineDistance(Coordinate coords1, Coordinate coords2, int precision=2)
     {
-        const int R = 6371000; // Earth's radius in meters
+        const int R = 6371000;
 
         double phi1 = coords1.Lat.ToRadians();
         double phi2 = coords2.Lat.ToRadians();

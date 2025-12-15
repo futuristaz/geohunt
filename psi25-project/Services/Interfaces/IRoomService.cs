@@ -1,4 +1,3 @@
-// Services/Interfaces/IRoomService.cs
 using psi25_project.Models.Dtos;
 
 namespace psi25_project.Services.Interfaces

@@ -1,5 +1,3 @@
-using System;
-
 namespace psi25_project.Models.Dtos
 {
     public class LeaderboardEntry : IComparable<LeaderboardEntry>

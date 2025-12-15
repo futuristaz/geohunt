@@ -37,7 +37,6 @@ public class AchievementService : IAchievementService
 
     public async Task<IReadOnlyList<UserAchievement>> OnRoundSubmittedAsync(Guid userId, Guid gameId, int roundNumber, double distanceKm, int score)
     {
-        // Load only relevant achievements
         var catalog = await _achievementRepository.GetActiveByCodesAsync(RoundSubmittedCodes);
         
         var stats = await _userStatsRepository.GetOrCreateAsync(userId);
@@ -53,7 +52,6 @@ public class AchievementService : IAchievementService
 
     public async Task<IReadOnlyList<UserAchievement>> OnGameFinishedAsync(Guid userId, Guid gameId, int totalScore, int totalRounds)
     {
-        // 1) Load relevant achievements
         var catalog = await _achievementRepository.GetActiveByCodesAsync(GameFinishedCodes);
         var guesses = await _guessRepository.GetGuessesByGameAsync(gameId);
         var stats = await UpdateStatsForGameAsync(userId, totalScore);
@@ -80,7 +78,6 @@ public class AchievementService : IAchievementService
         if (unlockedAchievements == null || unlockedAchievements.Count == 0)
             return new List<AchievementDto>();
 
-        // Map UserAchievement (which contains Achievement and UnlockedAt) to the DTO
         var dtos = unlockedAchievements.Select(ua => new AchievementDto
         {
             Code = ua.Achievement?.Code ?? string.Empty,
@@ -236,7 +233,6 @@ public class AchievementService : IAchievementService
         return await SaveAndReloadUnlockedAchievementsAsync(userId, newUnlocks);
     }
 
-    // Map achievement codes to achievement objects from catalog
     private static List<Achievement> MapCodesToAchievements(
         List<string> achievementCodes, 
         IReadOnlyList<Achievement> catalog)
@@ -246,7 +242,6 @@ public class AchievementService : IAchievementService
             .ToList();
     }
 
-    // Filter out achievements that user has already unlocked
     private async Task<List<UserAchievement>> FilterAlreadyUnlockedAsync(
         Guid userId, 
         List<Achievement> targetAchievements)
@@ -273,7 +268,6 @@ public class AchievementService : IAchievementService
         return newUnlocks;
     }
 
-    // Save new unlocks and reload with full achievement data
     private async Task<IReadOnlyList<UserAchievement>> SaveAndReloadUnlockedAchievementsAsync(
         Guid userId, 
         List<UserAchievement> newUnlocks)

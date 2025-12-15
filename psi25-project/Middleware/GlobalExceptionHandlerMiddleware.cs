@@ -47,7 +47,6 @@ namespace psi25_project.Middleware
 
             context.Response.ContentType = "application/json";
 
-            // Map error codes to appropriate HTTP status codes
             context.Response.StatusCode = exception.ErrorCode switch
             {
                 "OVER_QUERY_LIMIT" or "OVER_DAILY_LIMIT" => (int)HttpStatusCode.TooManyRequests, // 429

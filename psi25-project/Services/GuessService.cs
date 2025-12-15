@@ -58,7 +58,6 @@ namespace psi25_project.Services
 
             await _gameRepository.UpdateAsync(game);
 
-            // achievements handling
             var roundUnlocks = await _achievementService.OnRoundSubmittedAsync(
                 userId: game.UserId,
                 gameId: game.Id,
@@ -131,7 +130,7 @@ namespace psi25_project.Services
             foreach (var ua in allUnlocks)
             {
                 if (ua?.Achievement == null)
-                    continue; // or log a warning
+                    continue;
 
                 var a = ua.Achievement;
                 dtoList.Add(new AchievementUnlockDto

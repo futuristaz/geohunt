@@ -10,6 +10,5 @@ public class UserStats
     public int LongestStreakDays { get; set; }
     public DateTime? LastPlayedDateUtc { get; set; }
 
-    // Nav property
     public ApplicationUser? User { get; set; }
 }
