@@ -279,13 +279,11 @@ using (var scope = app.Services.CreateScope())
         Log.Information("Testing database connection...");
         Log.Information("Attempting to open database connection...");
 
-        // Try to actually open a connection to get the real error
-        await using (var connection = context.Database.GetDbConnection())
-        {
-            await connection.OpenAsync();
-            Log.Information("Database connection opened successfully");
-        }
-
+        // Test the connection without disposing it (EF Core will reuse it)
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        Log.Information("Database connection opened successfully");
+        connection.Close();
         Log.Information("Database connection successful");
     }
     catch (Exception ex)
