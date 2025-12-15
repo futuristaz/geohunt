@@ -54,11 +54,13 @@ if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCas
 }
 
 // Add SSL mode if not present (Render requires SSL)
-if (!connectionString.Contains("sslmode=", StringComparison.OrdinalIgnoreCase))
+// Use NpgsqlConnectionStringBuilder to properly construct the connection string
+var connStringBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+if (connStringBuilder.SslMode == Npgsql.SslMode.Disable || !connectionString.Contains("sslmode", StringComparison.OrdinalIgnoreCase))
 {
-    var separator = connectionString.Contains("?") ? "&" : "?";
-    connectionString += $"{separator}sslmode=require";
-    Log.Information("Added sslmode=require to connection string");
+    connStringBuilder.SslMode = Npgsql.SslMode.Require;
+    connectionString = connStringBuilder.ConnectionString;
+    Log.Information("Added SslMode=Require using NpgsqlConnectionStringBuilder");
 }
 
 // Validate connection string format
