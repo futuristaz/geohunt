@@ -71,7 +71,6 @@ export default function RoomLobby() {
     loadPlayers();
   }, [userId, roomCode]);
 
-  // Reset navigating flag when returning to lobby
   useEffect(() => {
     isNavigatingRef.current = false;
     if (userId && roomCode) {
@@ -87,7 +86,6 @@ export default function RoomLobby() {
     }
   }, [userId, roomCode]);
 
-  // Connect to RoomHub
   useEffect(() => {
     if (!roomCode || !myPlayerId || !myDisplayName) return;
     if (roomHubRef.current) return;
@@ -173,7 +171,6 @@ export default function RoomLobby() {
     };
   }, [roomCode, myPlayerId, navigateToGame]);
 
-  // Toggle ready
   const handleToggleReady = async () => {
     if (!myPlayerId || !roomHubConnected) return setError("Not connected to server");
     try {

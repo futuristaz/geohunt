@@ -22,5 +22,4 @@ export const achievementIcons: Record<string, LucideIcon> = {
   LATE_NIGHT_PLAYER: Moon
 };
 
-// fallback if code is unknown
 export const defaultAchievementIcon: LucideIcon = HelpCircle;

@@ -68,7 +68,6 @@ export default function MultiplayerGame() {
   const [waitingForOthers, setWaitingForOthers] = useState(false);
   const [gameComplete, setGameComplete] = useState(false);
 
-  // Fetch current user
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -85,7 +84,6 @@ export default function MultiplayerGame() {
     loadUser();
   }, []);
 
-  // Fetch player ID for this room
   useEffect(() => {
     if (!userId || !roomCode) return;
 
@@ -108,7 +106,6 @@ export default function MultiplayerGame() {
     loadPlayer();
   }, [userId, roomCode]);
 
-  // Wait for Google Maps API
   const waitGoogleMaps = () =>
     new Promise<void>((resolve, reject) => {
       const start = Date.now();
@@ -121,12 +118,10 @@ export default function MultiplayerGame() {
       tick();
     });
 
-  // Initialize or update Street View panorama
   const updateStreetView = async (lat: number, lng: number) => {
     try {
       await waitGoogleMaps();
 
-      // Wait for the DOM element to be ready
       if (!streetViewRef.current) {
         console.error("Street View container not ready");
         throw new Error("Street View container not mounted");
@@ -160,7 +155,6 @@ export default function MultiplayerGame() {
     }
   };
 
-  // Initialize SignalR connection
   useEffect(() => {
     if (!roomCode || !gameId || !myPlayerId) return;
     if (isInitializedRef.current) return;
@@ -174,7 +168,6 @@ export default function MultiplayerGame() {
 
     connectionRef.current = connection;
 
-    // Connection state handlers
     connection.onclose(() => {
       console.log("GameHub disconnected");
     });
@@ -193,23 +186,20 @@ export default function MultiplayerGame() {
       }
     });
 
-    // Listen for round start
     connection.on("RoundStarted", async (data: RoundData) => {
       console.log("🎮 RoundStarted received:", data);
       console.log("📍 Previous round:", roundData?.currentRound, "→ New round:", data.currentRound);
       
-      // Reset ALL state for new round
       pendingRoundDataRef.current = data;
       setRoundData(data);
       setSelectedCoords(null);
       setHasSubmitted(false);
-      setWaitingForOthers(false); // ✅ CRITICAL: Hide waiting overlay
+      setWaitingForOthers(false);
       setGameComplete(false);
-      setLoading(true); // Show loading while Street View updates
+      setLoading(true);
       
       console.log("✅ State reset for new round");
       
-      // IMPORTANT: Reset all players' finished status for the new round
       setGameState((prev) => {
         if (!prev) return prev;
         const newState = {
@@ -217,7 +207,7 @@ export default function MultiplayerGame() {
           currentRound: data.currentRound,
           players: prev.players.map((p) => ({
             ...p,
-            finished: false, // Reset finished status for new round
+            finished: false, 
           })),
         };
         console.log("🔄 Updated game state:", newState);
@@ -225,24 +215,20 @@ export default function MultiplayerGame() {
       });
     });
 
-    // Listen for game state updates
     connection.on("GameStateUpdated", (state: MultiplayerGameState) => {
       console.log("GameStateUpdated:", state);
       console.log("Current roundData:", roundData);
       setGameState(state);
       
-      // ✅ If this is a state update for a new round (all finished = false), hide waiting overlay
       if (state.players.every(p => !p.finished)) {
         console.log("New round detected - all players not finished yet");
         setWaitingForOthers(false);
       }
     });
 
-    // Listen for round results
     connection.on("RoundResult", (result: RoundResult) => {
       console.log("RoundResult:", result);
       
-      // Update the game state to reflect the player who finished
       setGameState((prev) => {
         if (!prev) return prev;
         return {
@@ -256,17 +242,14 @@ export default function MultiplayerGame() {
       });
     });
 
-    // Listen for game finished
     connection.on("GameFinished", (finalState: MultiplayerGameState) => {
       console.log("GameFinished:", finalState);
       
-      // Update state with final scores and show completion message
       setGameState(finalState);
       setWaitingForOthers(false);
       setGameComplete(true);
       setLoading(false);
       
-      // Disconnect from the game hub before navigating
       setTimeout(async () => {
         if (connectionRef.current) {
           await connectionRef.current.stop();
@@ -281,7 +264,6 @@ export default function MultiplayerGame() {
         await connection.start();
         console.log("Connected to GameHub for game");
 
-        // Join the game
         await connection.invoke("JoinGame", roomCode, gameId);
         console.log("Joined game successfully");
       } catch (err) {
@@ -299,11 +281,9 @@ export default function MultiplayerGame() {
     };
   }, [roomCode, gameId, myPlayerId, navigate]);
 
-  // Separate effect to initialize Street View after DOM is ready
   useEffect(() => {
     if (!roundData) return;
     
-    // Small delay to ensure DOM is fully rendered
     const timer = setTimeout(async () => {
       if (!streetViewRef.current) {
         console.error("Street View container still not ready after delay");
@@ -312,7 +292,6 @@ export default function MultiplayerGame() {
         return;
       }
       
-      // If we have pending round data and the DOM is ready, initialize Street View
       try {
         console.log("Initializing Street View with coordinates:", {
           lat: roundData.roundLatitude,
@@ -326,7 +305,7 @@ export default function MultiplayerGame() {
         setError("Failed to load Street View location");
         setLoading(false);
       }
-    }, 100); // 100ms delay to ensure DOM is ready
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [roundData]);
@@ -340,7 +319,6 @@ export default function MultiplayerGame() {
     try {
       setSubmitting(true);
 
-      // Submit guess to server
       await connectionRef.current.invoke(
         "SubmitGuess",
         myPlayerId,
@@ -352,7 +330,6 @@ export default function MultiplayerGame() {
       setHasSubmitted(true);
       setSelectedCoords(null);
       
-      // Always show waiting overlay after submitting
       setWaitingForOthers(true);
     } catch (err) {
       console.error("Failed to submit guess:", err);

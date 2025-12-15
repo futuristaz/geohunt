@@ -6,7 +6,7 @@ export default function Signup() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState(""); // optional, remove if not needed
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -34,7 +34,6 @@ export default function Signup() {
       });
 
       if (res.ok) {
-        // Registration successful → go to login
         navigate("/login");
       } else {
         const data = await res.json().catch(() => null);

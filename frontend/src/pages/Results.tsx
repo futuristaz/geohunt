@@ -28,7 +28,6 @@ export default function Results() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // If someone navigates here directly (no state), show a nice fallback
   if (!state) {
     return (
       <main className="min-h-full text-white flex items-center justify-center px-4">

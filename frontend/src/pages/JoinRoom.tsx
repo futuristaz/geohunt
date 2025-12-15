@@ -9,7 +9,6 @@ export default function JoinRoom() {
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
 
-  // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -25,7 +24,6 @@ export default function JoinRoom() {
     fetchUser();
   }, [navigate]);
 
-  // Join room handler
   const handleJoinRoom = async () => {
     if (!joinRoomCode || !displayName || !userId) {
       setError('Please fill all fields');
@@ -50,7 +48,6 @@ export default function JoinRoom() {
     }
   };
 
-  // Create room handler
   const handleCreateRoom = async () => {
     if (!displayName || !userId) {
       setError('Please enter your name');
@@ -66,7 +63,6 @@ export default function JoinRoom() {
       if (!res.ok) throw new Error('Failed to create room');
       const room = await res.json();
 
-      // Auto-join creator
       const joinRes = await fetch('/api/Rooms/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

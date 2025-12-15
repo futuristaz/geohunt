@@ -1,4 +1,3 @@
-// src/components/MiniMap.tsx
 /// <reference types="google.maps" />
 import { useEffect, useRef, useState } from "react";
 
@@ -21,7 +20,6 @@ type MiniMapProps = {
 
 function waitForGoogleMaps(): Promise<void> {
   return new Promise((resolve, reject) => {
-    // If already loaded, resolve immediately
     if (window.google?.maps) {
       return resolve();
     }
@@ -61,14 +59,11 @@ export default function MiniMap({
   }, [onSelect]);
 
   useEffect(() => {
-    // Check if we already have a working map
     if (mapRef.current && clickListenerRef.current && markerRef.current) {
       return;
     }
 
-    // If we have a map but missing listener or marker, restore them
     if (mapRef.current) {
-      // Recreate marker if missing
       if (!markerRef.current) {
         markerRef.current = new window.google.maps.Marker({
           map: mapRef.current,
@@ -77,7 +72,6 @@ export default function MiniMap({
         });
       }
 
-      // Reattach listener if missing
       if (!clickListenerRef.current) {
         clickListenerRef.current = mapRef.current.addListener(
           "click",
@@ -127,7 +121,6 @@ export default function MiniMap({
           gestureHandling: 'greedy',
         });
 
-        // Wait a moment for map to fully render
         await new Promise(resolve => setTimeout(resolve, 100));
 
         markerRef.current = new window.google.maps.Marker({
@@ -151,11 +144,9 @@ export default function MiniMap({
 
             const position: LatLngLiteral = { lat, lng };
 
-            // Update marker position and make it visible
             markerRef.current!.setPosition(position);
             markerRef.current!.setVisible(true);
 
-            // Call callback
             onSelectRef.current?.(position);
           }
         );
@@ -178,7 +169,6 @@ export default function MiniMap({
         markerRef.current.setMap(null);
         markerRef.current = null;
       }
-      // Don't clear mapRef.current to allow reuse
     };
   }, [initialCenter, initialZoom, minZoomOnSelect]);
 

@@ -26,7 +26,7 @@ interface GeocodingApiResponse {
 type GameStateFromStart = {
   gameId: string;
   totalRounds: number;
-  currentRound: number; // starts at 1
+  currentRound: number; 
 };
 
 type GuessPostResponse = {
@@ -41,7 +41,7 @@ type GuessPostResponse = {
     score: number;
   };
   finished: boolean;
-  currentRound: number; // new current round (advanced or same if finished)
+  currentRound: number; 
   totalScore: number;
   achievementsUnlocked: UserAchievementApi[];
 };
@@ -85,7 +85,6 @@ const StreetViewApp = () => {
   const achievementSoundRef = useRef<HTMLAudioElement | null>(null);
   const [finishedGamePending, setFinishedGamePending] = useState(false);
 
-  // ---- utility: handle API errors consistently ----
   const handleApiError = async (response: Response, context: string) => {
     if (!response.ok) {
       const contentType = response.headers.get('Content-Type') || '';
@@ -94,7 +93,6 @@ const StreetViewApp = () => {
       if (contentType.includes('application/json')) {
         errorData = await response.json().catch(() => ({}));
       } else {
-        // Try to get text for non-JSON responses
         errorData.message = await response.text().catch(() => '');
       }
 
@@ -107,7 +105,6 @@ const StreetViewApp = () => {
     }
   };
 
-  // ---- read state passed from Start.tsx ----
   useEffect(() => {
     const s = (location.state || {}) as Partial<GameStateFromStart>;
     if (!s.gameId) {
@@ -119,7 +116,6 @@ const StreetViewApp = () => {
     setTotalRounds(s.totalRounds ?? 3);
   }, [location.state, navigate]);
 
-  // ---- utility: wait for Google Maps ----
   const waitGoogleMaps = () =>
     new Promise<void>((resolve, reject) => {
       const start = Date.now();
@@ -132,7 +128,6 @@ const StreetViewApp = () => {
       tick();
     });
 
-  // ---- load a new location: fetch coords, init/retarget pano, persist Location ----
   const applyLocationToPano = (position: Coordinates, locId: number) => {
     if (!panoRef.current) {
       panoRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current!, {
@@ -183,7 +178,6 @@ const StreetViewApp = () => {
     applyLocationToPano(position, locId);
   };
 
-  // ---- initial mount: wait for maps, mount pano and first round location ----
   useEffect(() => {
     if (isInitializedRef.current) return;
     isInitializedRef.current = true;
@@ -201,10 +195,8 @@ const StreetViewApp = () => {
         console.error('Street View init error:', err);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- submit guess: score, post Guess, advance or finish ----
   const handleSubmitGuess = async () => {
     if (!selectedCoords || !initialCoords || !gameId || !locationId) {
       console.error('Missing required data:', { selectedCoords, initialCoords, gameId, locationId });
@@ -220,7 +212,6 @@ const StreetViewApp = () => {
       setSubmitting(true);
       const completedRound = round;
 
-      // A) score this guess
       const resultResponse = await fetch('/api/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -229,7 +220,6 @@ const StreetViewApp = () => {
       await handleApiError(resultResponse, 'calculate score');
       const resultData: { score: number; distance: number } = await resultResponse.json();
 
-      // B) create guess (server updates total score, advances round, sets finished)
       const guessRes = await fetch('/api/Guess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -270,12 +260,10 @@ const StreetViewApp = () => {
         totalScore: guessData.totalScore,
       });
         
-      // If game finished and achievements unlocked, mark it so achievement system handles navigation
       if (guessData.finished && guessData.achievementsUnlocked.length > 0) {
         setFinishedGamePending(true);
       }
 
-      // Prefetch next round location so it's ready when user continues
       setPendingNextLocation(null);
       if (!guessData.finished) {
         fetchAndPersistLocation()
@@ -297,14 +285,11 @@ const StreetViewApp = () => {
     if (!postRoundSummary) return;
 
     if (postRoundSummary.finished) {
-      // If there are achievements queued, close modal and let them show first
-      // Achievement system will handle navigation after all popups are closed
       if (achievementQueue.length > 0) {
         setPostRoundSummary(null);
         return;
       }
       
-      // No achievements, safe to navigate to results
       navigate(`/results/${gameId}`, {
         state: {
           gameId,
@@ -339,18 +324,15 @@ const StreetViewApp = () => {
       const [, ...rest] = prevQueue;
 
       if (rest.length === 0) {
-        // No more achievements in the queue
         setCurrentAchievementPopup(null);
 
         if (finishedGamePending && gameId) {
-          // We were on the last round, and now all popups are shown → go to results
           navigate(`/results/${gameId}`, {
             state: { gameId },
             replace: true,
           });
         }
       } else {
-        // Show the next one
         setCurrentAchievementPopup(rest[0]);
       }
 
@@ -480,7 +462,7 @@ const StreetViewApp = () => {
         achievement={currentAchievementPopup}
         isOpen={!!currentAchievementPopup}
         onClose={handleCloseCurrentAchievement}
-        autoCloseMs={3000} // or undefined if you want manual-only closing
+        autoCloseMs={3000}
       />
     </div>
   );
