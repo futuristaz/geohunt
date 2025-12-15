@@ -10,7 +10,7 @@ export default function Login() {
 
   const handleLogin = async () => {
     try {
-      setError(""); // Clear any previous errors
+      setError("");
 
       const res = await fetch("/api/Account/login", {
         method: "POST",

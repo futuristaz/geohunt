@@ -127,7 +127,6 @@ namespace Geohunt.Tests.Integration
             using var scope = _factory.Services.CreateScope();
             var services = scope.ServiceProvider;
 
-            // Act - Try to get CORS policy provider
             var corsService = services.GetService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsService>();
 
             // Assert
@@ -141,7 +140,7 @@ namespace Geohunt.Tests.Integration
             using var scope = _factory.Services.CreateScope();
             var services = scope.ServiceProvider;
 
-            // Act - Check if MVC services are registered
+            // Act
             var mvcServiceCollectionExtensions = services.GetService<Microsoft.AspNetCore.Mvc.Infrastructure.IActionDescriptorCollectionProvider>();
 
             // Assert

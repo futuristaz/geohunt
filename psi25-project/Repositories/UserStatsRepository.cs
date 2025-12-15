@@ -22,7 +22,6 @@ public class UserStatsRepository : IUserStatsRepository
         if (stats != null)
             return stats;
 
-        // Not found → create new
         stats = new UserStats
         {
             UserId = userId,

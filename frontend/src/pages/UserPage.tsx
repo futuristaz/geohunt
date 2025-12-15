@@ -39,14 +39,12 @@ export default function UserPage() {
     return <div>Failed to load achievements</div>;
   }
 
-  // Build lookup map for unlocked achievements
   const userAchievementsByCode: Record<string, (typeof userAchievements)[number]> =
     {};
   for (const a of userAchievements) {
     userAchievementsByCode[a.code] = a;
   }
 
-  // Merge: all achievements + unlocked info
   const mergedAchievements = availableAchievements
     .map((a) => {
       const unlocked = userAchievementsByCode[a.code];
@@ -57,7 +55,6 @@ export default function UserPage() {
       };
     })
     .sort((a, b) => {
-      // unlocked first
       if (a.unlocked === b.unlocked) return 0;
       return a.unlocked ? -1 : 1;
     });
@@ -72,7 +69,7 @@ export default function UserPage() {
     try {
       const res = await fetch('/api/Account/logout', {
         method: 'POST',
-        credentials: 'include' // include cookies for authentication
+        credentials: 'include' 
       });
       if (res.ok) {
         navigate('/login', { replace: true });

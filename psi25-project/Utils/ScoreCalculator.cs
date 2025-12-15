@@ -2,8 +2,8 @@ namespace psi25_project.Utils;
 
 public static class ScoreCalculator
 {
-    private const int MAX_SCORE = 5000; //Maximum score is 5000 points
-    private const double BIGGEST_DISTANCE = 5000.0; //(km), after this distance, score is close to 0
+    private const int MAX_SCORE = 5000; 
+    private const double BIGGEST_DISTANCE = 5000.0; 
     public static int CalculateGeoScore(double distance)
     {
         double score = MAX_SCORE * Math.Exp(-distance / BIGGEST_DISTANCE);

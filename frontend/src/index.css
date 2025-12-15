@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Default dark background and readable default text color for the whole app */
 html, body {
 	height: 100%;
 	margin: 0;
@@ -11,7 +10,6 @@ html, body {
 	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-/* Ensure root elements inherit the default text color */
 #root {
 	min-height: 100%;
 }

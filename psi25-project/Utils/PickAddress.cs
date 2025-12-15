@@ -19,7 +19,7 @@ namespace psi25_project.Utils
                         continue;
 
                     count++;
-                    if (Random.Shared.Next(count) == 0) //reservoir sampling
+                    if (Random.Shared.Next(count) == 0) 
                         selectedAddress = line;
                 }
             }

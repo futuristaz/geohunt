@@ -1,4 +1,3 @@
-using System;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -87,7 +86,6 @@ public class AccountServiceTests
         return signInManager;
     }
 
-        // RegisterAsync Tests
         [Fact]
         public async Task RegisterAsync_WithValidModel_ShouldReturnSuccessAndAddPlayerRole()
         {
@@ -277,7 +275,7 @@ public class AccountServiceTests
             _signInManagerMock.Verify(x => x.PasswordSignInAsync(
                 It.IsAny<string>(), 
                 It.IsAny<string>(), 
-                false,  // isPersistent should be false
+                false,
                 It.IsAny<bool>()), Times.Once);
         }
 
@@ -303,7 +301,7 @@ public class AccountServiceTests
                 It.IsAny<string>(), 
                 It.IsAny<string>(), 
                 It.IsAny<bool>(),
-                false), Times.Once);  // lockoutOnFailure should be false
+                false), Times.Once);
         }
 
         [Fact]

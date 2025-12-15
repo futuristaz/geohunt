@@ -151,11 +151,9 @@ namespace psi25_project.Data
                 .HasForeignKey(ua => ua.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Prevent the same achievement being unlocked multiple times for the same user
             entity.HasIndex(ua => new { ua.UserId, ua.AchievementId })
                 .IsUnique();
 
-            // Optional: default value for UnlockedAt on DB side (you can also set it in code)
             entity.Property(ua => ua.UnlockedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         }
@@ -164,16 +162,13 @@ namespace psi25_project.Data
         {
             var entity = modelBuilder.Entity<UserStats>();
 
-            // UserId is PK
             entity.HasKey(us => us.UserId);
 
-            // 1:1 UserStats ↔ ApplicationUser
             entity.HasOne(us => us.User)
-                .WithOne() // or .WithOne(u => u.Stats) if you add a Stats nav on ApplicationUser
+                .WithOne() 
                 .HasForeignKey<UserStats>(us => us.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Reasonable defaults
             entity.Property(us => us.TotalGuesses)
                 .HasDefaultValue(0);
 

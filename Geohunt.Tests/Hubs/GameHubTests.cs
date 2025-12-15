@@ -1,12 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using Xunit;
 using psi25_project.Data;
 using psi25_project.Hubs;
 using psi25_project.Models;
@@ -35,7 +29,6 @@ public sealed class GameHubTests : IDisposable
 
         _context = new GeoHuntContext(options);
 
-        // Wire SignalR targets ONCE (no duplicate setups)
         _mockClients.Setup(c => c.Group(It.IsAny<string>()))
                     .Returns(_mockGroupProxy.Object);
 
@@ -85,7 +78,6 @@ public sealed class GameHubTests : IDisposable
             Players = players ?? new List<MultiplayerPlayer>()
         };
 
-        // IMPORTANT: Hub uses player.Game.RoomId -> avoid NRE in tests
         foreach (var p in game.Players)
             p.Game = game;
 
@@ -135,7 +127,6 @@ public sealed class GameHubTests : IDisposable
 
         await _hub.StartGame(roomCode);
 
-        // GameStarted -> group, argument is string gameId
         _mockGroupProxy.Verify(c => c.SendCoreAsync(
                 "GameStarted",
                 It.Is<object[]>(args => args.Length == 1 && (string)args[0] == gameId.ToString()),
@@ -233,7 +224,6 @@ public sealed class GameHubTests : IDisposable
             Score = 4500
         };
 
-        // Create the player FIRST (without Game property)
         var player = new MultiplayerPlayer
         {
             PlayerId = playerId,
@@ -243,8 +233,6 @@ public sealed class GameHubTests : IDisposable
             Player = new Player { Id = playerId, DisplayName = "Player1" }
         };
 
-        // Create the game and pass the player in the list
-        // MakeGame will automatically set player.Game for all players in the list
         var game = MakeGame(
             gameId: gameId,
             roomId: roomId,
@@ -252,7 +240,7 @@ public sealed class GameHubTests : IDisposable
             totalRounds: 5,
             roundLat: 54.1,
             roundLng: 24.1,
-            players: new List<MultiplayerPlayer> { player });  // ← Pass player here!
+            players: new List<MultiplayerPlayer> { player });
 
         var nextRoundDto = new MultiplayerGameDto
         {
@@ -298,7 +286,6 @@ public sealed class GameHubTests : IDisposable
     [Fact]
     public async Task SubmitGuess_AllPlayersFinished_StartsNextRound_BroadcastsUpdates()
     {
-        // NOTE: Hub has Task.Delay(2000) when all finished -> this test will take ~2s.
         var playerId = Guid.NewGuid();
         var roomId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
@@ -349,9 +336,7 @@ public sealed class GameHubTests : IDisposable
 
         _mockGameService.Verify(s => s.NextRoundAsync(gameId), Times.Once);
 
-        // GameStateUpdated happens at least twice here:
-        // 1) after the guess (current state DTO)
-        // 2) after NextRoundAsync (nextRoundDto)
+
         _mockGroupProxy.Verify(c => c.SendCoreAsync(
                 "GameStateUpdated",
                 It.IsAny<object[]>(),
@@ -368,7 +353,6 @@ public sealed class GameHubTests : IDisposable
     [Fact]
     public async Task SubmitGuess_LastRoundCompleted_EndsGame_BroadcastsGameFinished()
     {
-        // NOTE: Hub has Task.Delay(2000) when all finished -> this test will take ~2s.
         var playerId = Guid.NewGuid();
         var roomId = Guid.NewGuid();
         var gameId = Guid.NewGuid();

@@ -268,7 +268,7 @@ public class RoomHubTests
         {
             Id = Guid.Parse(roomId1),
             RoomCode = "ROOM1",
-            Players = new List<Player> { player },  // ← Reference the same player
+            Players = new List<Player> { player },
             RowVersion = new byte[] {1}
         };
 
@@ -276,8 +276,8 @@ public class RoomHubTests
         {
             Id = Guid.Parse(roomId2),
             RoomCode = "ROOM2",
-            Players = new List<Player> { player },  // ← Reference the same player
-            RowVersion = new byte[] {1}  // ← Add RowVersion here too
+            Players = new List<Player> { player },  
+            RowVersion = new byte[] {1}
         };
 
         _context.Rooms.AddRange(room1, room2);

@@ -1,15 +1,9 @@
-using System;
-
 namespace psi25_project
 {
     public enum Direction
     {
         NORTH, SOUTH, EAST, WEST
     }
-
-    //-----------------------------------------------------------------------------------------------
-    //RANDOMLY PICK 2 DIRECTIONS
-    //-----------------------------------------------------------------------------------------------
     public class DirectionPicker
     {
         public static (Direction direction1, Direction direction2) GetRandomDirections()
@@ -22,7 +16,6 @@ namespace psi25_project
             return (direction1, direction2);
         }
     }
-    //-----------------------------------------------------------------------------------------------
 
     public class CoordinateModifier
     {
@@ -35,9 +28,6 @@ namespace psi25_project
 
             return (lat, lng);
         }
-        //-----------------------------------------------------------------------------------------------
-        //MODIFY COORDINATES BY DIRECTION AND METERS
-        //------------------------------------------------------------------------------
         private static (double, double) ApplyShift(double lat, double lng, Direction dir)
         {
             double meters = Random.Shared.NextDouble() * 20000;
@@ -58,7 +48,5 @@ namespace psi25_project
 
             return (lat, lng);
         }
-        //------------------------------------------------------------------------------
     }
-    //-----------------------------------------------------------------------------------------------
 }

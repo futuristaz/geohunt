@@ -1,5 +1,3 @@
-using psi25_project.Models;
-
 namespace psi25_project.Models.Dtos
 {
     public class DistanceDto

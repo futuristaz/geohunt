@@ -19,7 +19,6 @@ export function useAvailableAchievements() {
 
         const data: AchievementApi[] = await res.json();
 
-        // Attach icons based on code
         const withIcons: Achievement[] = data.map((a) => ({
           ...a,
           icon: achievementIcons[a.code] ?? defaultAchievementIcon,

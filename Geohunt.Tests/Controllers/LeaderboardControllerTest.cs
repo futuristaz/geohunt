@@ -1,13 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using psi25_project.Controllers;
-using psi25_project.Data;
-using psi25_project.Models;
 using psi25_project.Models.Dtos;
 using psi25_project.Services.Interfaces;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace Geohunt.Tests.Controllers
 {
