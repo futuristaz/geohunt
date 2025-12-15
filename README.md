@@ -33,7 +33,6 @@ Key features include:
   *Room Lobby for multiplayer games.*
   ![Room Lobby](Docks/RoomLobby.png)
 
-
 ## 🛠 Tech Stack
 
 This section describes the project's technology choices, architecture.
@@ -133,3 +132,4 @@ By:
 - Rokas Sirvydis https://github.com/R0ckguy
 - Aidija Rubliauskaitė https://github.com/aidijarub
 
+[Youtube Presentation](https://www.youtube.com/watch?v=qvBHpo8wTqI)
